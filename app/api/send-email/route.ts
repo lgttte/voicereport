@@ -233,7 +233,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MGRAY);
     doc.text(
-      "VoiceReport -- Le rapport chantier en 30 secondes",
+      "VoiceReport \u2014 Le rapport chantier en 30 secondes",
       PW / 2,
       PH - 6.5,
       { align: "center" }
@@ -245,7 +245,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     // Build columns from available data only
     const columns: { label: string; value: string }[] = [];
     columns.push({ label: "DATE DU RAPPORT", value: today });
-    if (rapporteur) columns.push({ label: "RAPPORTE PAR", value: rapporteur });
+    if (rapporteur) columns.push({ label: "RAPPORT\u00c9 PAR", value: rapporteur });
     if (lieu)       columns.push({ label: "CHANTIER", value: lieu });
 
     if (columns.length === 0) return y;
@@ -307,7 +307,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...WHITE);
-    doc.text(cleanText || "Statut non defini", PW / 2, y + BAR_H / 2 + 1, { align: "center" });
+    doc.text(cleanText || "Statut non d\u00e9fini", PW / 2, y + BAR_H / 2 + 1, { align: "center" });
 
     return y + BAR_H + 6;
   }
@@ -425,12 +425,12 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
     y += TITLE_H;
 
-    // Body — light gray fill + subtle border
+    // Body — light gray fill + subtle border (sharp top, rounded bottom)
     doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, bodyH, 0, 1.5, "F");
+    doc.rect(ML, y, CW, bodyH, "F");
     doc.setDrawColor(...BGRAY);
     doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, bodyH, 0, 1.5, "S");
+    doc.roundedRect(ML, y, CW, bodyH, 1, 1, "S");
 
     doc.setFontSize(9);
     let ty = y + PAD + LINE_H - 1;
@@ -507,7 +507,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...WHITE);
     doc.text(
-      "Rapport genere et certifie par VoiceReport",
+      "Rapport g\u00e9n\u00e9r\u00e9 et certifi\u00e9 par VoiceReport",
       PW / 2,
       y + BLOCK_H / 2 - 1,
       { align: "center" }
@@ -518,7 +518,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...ORANGE);
     doc.text(
-      today + " a " + timeStr + "  |  Ref. VR-" + Date.now().toString(36).toUpperCase().slice(-6),
+      today + " \u00e0 " + timeStr + "  |  R\u00e9f. VR-" + Date.now().toString(36).toUpperCase().slice(-6),
       PW / 2,
       y + BLOCK_H / 2 + 5,
       { align: "center" }
@@ -560,41 +560,30 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   y += 6;
 
   // Always draw all 4 sections — show "Rien a signaler" when empty
-  y = drawSection("TRAVAUX REALISES",     travaux,   y, "travaux");
-  y = drawSection("PROBLEMES RENCONTRES", problemes, y, "problemes");
-  y = drawSection("MATERIEL MANQUANT",    materiel,  y, "materiel");
-  y = drawSection("A PREVOIR / SUITE",    aprevoir,  y, "aprevoir");
+  y = drawSection("TRAVAUX R\u00c9ALIS\u00c9S",       travaux,   y, "travaux");
+  y = drawSection("PROBL\u00c8MES RENCONTR\u00c9S", problemes, y, "problemes");
+  y = drawSection("MAT\u00c9RIEL MANQUANT",      materiel,  y, "materiel");
+  y = drawSection("\u00c0 PR\u00c9VOIR / SUITE",      aprevoir,  y, "aprevoir");
 
   // Certification signature block
   y = drawSignatureBlock(y);
 
   // ── PAGE 2 — Photos (large, one per row) ──────────────────────────
-  // Start photos on a new page
-  doc.addPage();
-  drawPageChrome();
-  y = logoDataUrl ? 42 : 34;
+  // Only create photo page if there are photos
+  if (compressedPhotos.length > 0) {
+    doc.addPage();
+    drawPageChrome();
+    y = logoDataUrl ? 42 : 34;
 
-  y = drawTitleBar("ANNEXES VISUELLES - PHOTOS DU CHANTIER", y);
+    y = drawTitleBar("ANNEXES VISUELLES - PHOTOS DU CHANTIER", y);
 
-  if (compressedPhotos.length === 0) {
-    // Placeholder box
-    doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, 22, 2, 2, "F");
-    doc.setDrawColor(...BGRAY);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, 22, 2, 2, "S");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...MGRAY);
-    doc.text("Aucune photo jointe a ce rapport.", PW / 2, y + 13, { align: "center" });
-  } else {
-    // One photo per row, full width for maximum size
-    const PHOTO_MAX_H = 180; // max height per photo in mm
+    const PHOTO_MAX_H = 190; // max height per photo in mm
     const LEGEND_H = 14;
+    const PHOTO_MIN_H = 50; // minimum photo height
 
     for (let i = 0; i < compressedPhotos.length; i++) {
-      // Check if we need a new page
-      if (y + 60 > PH - 18) {
+      // Check if we need a new page (at least PHOTO_MIN_H available)
+      if (y + PHOTO_MIN_H > PH - 18) {
         doc.addPage();
         drawPageChrome();
         y = logoDataUrl ? 42 : 34;
@@ -604,7 +593,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...MGRAY);
-      doc.text("Photo " + (i + 1), ML + 3, y + 5);
+      doc.text("Photo " + (i + 1) + " / " + compressedPhotos.length, ML + 3, y + 5);
       y += 8;
 
       try {
@@ -615,11 +604,12 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
         console.log(`[PDF PHOTOS] Dimensions originales: ${props.width}x${props.height}`);
         
         // Scale to full content width, respecting aspect ratio and max height
+        const availH = PH - 18 - y - LEGEND_H - 5;
+        const maxH = Math.max(PHOTO_MIN_H, Math.min(PHOTO_MAX_H, availH));
         let iw = CW;
         let ih = iw * (props.height / props.width);
-        const maxH = Math.min(PHOTO_MAX_H, PH - 18 - y - LEGEND_H - 5);
         if (ih > maxH) { ih = maxH; iw = ih * (props.width / props.height); }
-        console.log(`[PDF PHOTOS] Dimensions renderees: ${iw.toFixed(1)}x${ih.toFixed(1)}mm`);
+        console.log(`[PDF PHOTOS] Dimensions rendues: ${iw.toFixed(1)}x${ih.toFixed(1)}mm`);
 
         // Photo frame
         doc.setFillColor(...LGRAY);
@@ -630,7 +620,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
         // Center image
         doc.addImage(durl, "JPEG", ML + (CW - iw) / 2, y + 2, iw, ih);
-        console.log(`[PDF PHOTOS] Image ${i + 1} inseree avec succes`);
+        console.log(`[PDF PHOTOS] Image ${i + 1} ins\u00e9r\u00e9e avec succ\u00e8s`);
         y += ih + 6;
       } catch (photoErr) {
         console.error(`[PDF PHOTOS] Erreur lors de l'insertion de l'image ${i + 1}:`, photoErr);
