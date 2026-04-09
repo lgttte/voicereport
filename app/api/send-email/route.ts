@@ -247,7 +247,6 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     columns.push({ label: "DATE DU RAPPORT", value: today });
     if (rapporteur) columns.push({ label: "RAPPORTE PAR", value: rapporteur });
     if (lieu)       columns.push({ label: "CHANTIER", value: lieu });
-    if (meteo)      columns.push({ label: "METEO", value: meteo });
 
     if (columns.length === 0) return y;
 
