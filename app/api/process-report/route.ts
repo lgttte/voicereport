@@ -389,28 +389,65 @@ export async function POST(request: NextRequest) {
       `INTERDICTION ABSOLUE d'inventer des donnees ou d'ajouter des placeholders. ` +
       `Si une information n'est PAS dans le vocal, le champ correspondant doit etre OMIS du JSON (pas de valeur vide, pas de "Non precise", pas de "Rien a signaler"). ` +
       `\n\nREGLES DE REDACTION : ` +
-      `1) Chaque section doit contenir des puces courtes et percutantes (ex: "Coulage de dalle termine"). ` +
+      `1) Chaque section doit contenir des puces courtes et percutantes (ex: "Coulage de dalle terminé"). ` +
       `2) Pour les problemes, ajoute un prefixe de gravite : "[Attention]" pour mineur, "[Critique]" pour grave/bloquant. ` +
       `3) Les tableaux vides doivent etre des tableaux vides [], JAMAIS avec un texte generique. ` +
+      `\n\n━━━ DISTINCTION CRITIQUE : materiel_manquant vs a_prevoir ━━━` +
+      `\n\nmateriel_manquant = ce qui MANQUE PHYSIQUEMENT sur le chantier RIGHT NOW pour continuer a travailler :` +
+      `\n- Matieres premieres : ciment, sable, gravier, parpaings` +
+      `\n- Consommables : visserie, chevilles, colle, joint` +
+      `\n- Outillage manquant ou casse : meuleuse, niveau, perceuse` +
+      `\n- Equipements de protection : casque, gants, harnais` +
+      `\nExemples corrects : "5 sacs de ciment", "Vis 6x60", "Meuleuse (cassee)", "Gants de chantier"` +
+      `\nJAMAIS d'actions dans cette section. Uniquement des OBJETS/MATERIAUX physiques.` +
+      `\n\na_prevoir = les ACTIONS CONCRETES que le patron doit planifier ou declencher :` +
+      `\n- Commandes a passer : "Commander 5 sacs de ciment pour demain"` +
+      `\n- Interventions a prevoir : "Appeler technicien betonniere"` +
+      `\n- Controles a effectuer : "Verifier cables apres inondation"` +
+      `\n- Planification : "Prevoir equipe supplementaire vendredi"` +
+      `\n- Livraisons a organiser : "Livraison acier a reprogrammer"` +
+      `\nJAMAIS de liste de materiaux dans cette section. Uniquement des VERBES D'ACTION.` +
+      `\n\nREGLE DE DEDUCTION AUTOMATIQUE :` +
+      `\n- Si l'ouvrier dit "il manque du ciment" → materiel_manquant: ["Ciment"] ET a_prevoir: ["Commander du ciment"]` +
+      `\n- Si l'ouvrier dit "la betonniere est en panne" → problemes_rencontres: ["[Critique] Betonniere HS"] ET a_prevoir: ["Appeler technicien betonniere"]` +
+      `\n- Si l'ouvrier dit "le placo sera pose demain" → a_prevoir: ["Finaliser pose placo demain"] (PAS dans materiel_manquant)` +
+      `\n\n━━━ CORRECTION AUTOMATIQUE DES ACCENTS ET VOCABULAIRE ━━━` +
+      `\nToujours ecrire avec les accents corrects dans le JSON : réalisé, effectué, câbles, électrique, bétonnière, matériel, prévoir, problème.` +
+      `\nCorrections vocabulaire BTP :` +
+      `\n- "vlocos"/"blocos" → "Parpaings"` +
+      `\n- "bétoire" → "Bétonnière"` +
+      `\n- "agglos" → "Agglomérés"` +
+      `\n- "toupie" → "Camion toupie (béton)"` +
+      `\n- "fer"/"ferraille" (contexte armature) → "Armatures acier"` +
+      `\n- "placo" → "Plaques de plâtre"` +
+      `\n- "banche" → "Coffrage banche"` +
+      `\n- "IPN" → "Poutre IPN"` +
+      `\n- "chape" → "Chape de béton"` +
+      `\n- "enduit" → "Enduit de façade"` +
+      `\n- "jointoyer" → "Jointoyage"` +
+      `\n- "ragréage" → "Ragréage sol"` +
+      `\nSi mot inconnu mais contexte BTP clair → conserver + ajouter (?) pour signaler ambiguïté.` +
       `\n\nSTATUT GLOBAL — CALCUL AUTOMATIQUE obligatoire : ` +
-      `- 0 probleme dans la transcription = "Bon deroulement" ` +
-      `- 1-2 problemes mineurs = "Quelques difficultes" ` +
+      `- 0 probleme dans la transcription = "Bon déroulement" ` +
+      `- 1-2 problemes mineurs = "Quelques difficultés" ` +
       `- Probleme urgent/bloquant/critique = "Situation critique" ` +
       `\n\nReponds UNIQUEMENT avec un objet JSON. Inclus UNIQUEMENT les cles pour lesquelles tu as de l'information : ` +
-      `- statut_global (OBLIGATOIRE) : exactement "Bon deroulement", "Quelques difficultes", ou "Situation critique" ` +
+      `- statut_global (OBLIGATOIRE) : exactement "Bon déroulement", "Quelques difficultés", ou "Situation critique" ` +
       `- lieu_chantier (si mentionne) : nom du chantier, adresse, ou ville. IMPORTANT : corrige l'orthographe des noms de villes francaises si la transcription les a mal ecrites (ex: "ma saille" = Marseille, "lion" = Lyon, "too loose" = Toulouse). Ecris le nom correct de la ville. ` +
       `- rapporteur (si mentionne) : nom et/ou poste de la personne qui parle ` +
       `- meteo (si mentionnee) : conditions meteo en quelques mots ` +
-      `- equipe (si mentionne) : effectif present, ex "8 personnes" ou "equipe complete" ` +
-      `- avancement (si mentionne) : pourcentage ou description, ex "70%" ou "quasi termine" ` +
-      `- travaux_realises : TABLEAU de chaines courtes. [] si rien mentionne. ` +
-      `- problemes_rencontres : TABLEAU avec prefixes [Attention]/[Critique]. [] si aucun probleme. ` +
-      `- materiel_manquant : TABLEAU. [] si rien. ` +
-      `- a_prevoir : TABLEAU. [] si rien. ` +
+      `- equipe (si mentionne) : effectif present, ex "8 personnes" ou "équipe complète" ` +
+      `- avancement (si mentionne) : pourcentage ou description, ex "70%" ou "quasi terminé" ` +
+      `- travaux_realises : TABLEAU de chaines courtes avec accents. [] si rien mentionne. ` +
+      `- problemes_rencontres : TABLEAU avec prefixes [Attention]/[Critique] et accents. [] si aucun probleme. ` +
+      `- materiel_manquant : TABLEAU d'objets/materiaux PHYSIQUES uniquement. [] si rien ne manque. ` +
+      `- a_prevoir : TABLEAU d'ACTIONS a planifier uniquement. [] si rien a prevoir. ` +
       `- suggestion_legende_photo : courte phrase decrivant l'avancement ou le probleme principal. ` +
-      `\n\nEXEMPLE pour un vocal vague de 15 secondes disant "On a coule la dalle ce matin, tout s'est bien passe" : ` +
-      `{"statut_global":"Bon deroulement","travaux_realises":["Coulage de dalle realise"],"problemes_rencontres":[],"materiel_manquant":[],"a_prevoir":[],"suggestion_legende_photo":"Coulage de dalle en cours"} ` +
-      `Note : pas de lieu_chantier, pas de rapporteur, pas de meteo — car non mentionnes.`;
+      `\n\nEXEMPLE 1 — vocal simple "On a coulé la dalle ce matin, tout s'est bien passé" : ` +
+      `{"statut_global":"Bon déroulement","travaux_realises":["Coulage de dalle réalisé"],"problemes_rencontres":[],"materiel_manquant":[],"a_prevoir":[],"suggestion_legende_photo":"Coulage de dalle en cours"} ` +
+      `\nEXEMPLE 2 — vocal "Il manque du ciment et la bétonnière est en panne, faut appeler le réparateur" : ` +
+      `{"statut_global":"Situation critique","travaux_realises":[],"problemes_rencontres":["[Critique] Bétonnière en panne"],"materiel_manquant":["Ciment"],"a_prevoir":["Commander du ciment","Appeler réparateur bétonnière"],"suggestion_legende_photo":"Bétonnière en panne sur chantier"} ` +
+      `Note : "Ciment" dans materiel (objet physique), "Commander du ciment" dans a_prevoir (action).`;
 
     const anthropicResponse = await anthropic.messages.create({
       model: CLAUDE_MODEL,

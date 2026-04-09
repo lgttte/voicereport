@@ -376,12 +376,13 @@ export default function Home() {
   };
 
   // Only include sections that have items — never show empty sections
+  // Travaux & Problèmes always visible; Matériel & À prévoir hidden when empty
   const reportSections = [
-    { title: "Travaux réalisés",     items: report?.travaux_realises || [],     icon: FileText },
-    { title: "Problèmes rencontrés", items: report?.problemes_rencontres || [], icon: ShieldAlert },
-    { title: "Matériel manquant",    items: report?.materiel_manquant || [],    icon: Package },
-    { title: "À prévoir",            items: report?.a_prevoir || [],            icon: CalendarDays },
-  ];
+    { title: "Travaux réalisés",     items: report?.travaux_realises || [],     icon: FileText,     alwaysShow: true },
+    { title: "Problèmes rencontrés", items: report?.problemes_rencontres || [], icon: ShieldAlert,  alwaysShow: true },
+    { title: "Matériel manquant",    items: report?.materiel_manquant || [],    icon: Package,      alwaysShow: false },
+    { title: "À prévoir",            items: report?.a_prevoir || [],            icon: CalendarDays, alwaysShow: false },
+  ].filter(s => s.alwaysShow || s.items.length > 0);
 
   if (stage !== "review") {
     const isRecording = stage === "recording";
