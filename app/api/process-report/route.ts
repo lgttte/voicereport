@@ -3,6 +3,10 @@ import { OpenAI } from "openai";
 import { Anthropic } from "@anthropic-ai/sdk";
 import jsPDF from "jspdf";
 
+// Route segment config — augmenter la taille max du body pour les fichiers audio
+// et le timeout pour les appels Whisper + Claude
+export const maxDuration = 60; // secondes (Vercel Pro = 300s max, Hobby = 60s)
+
 type ReportSections = {
   statut_global: string;
   lieu_chantier?: string;
@@ -331,14 +335,17 @@ export async function POST(request: NextRequest) {
     // Étape 2 : Transcription audio (Whisper)
     console.log(`[TRANSCRIPTION] Envoi à OpenAI Whisper`);
     // Déterminer le type MIME et nom de fichier cohérent pour Whisper
+    // Safari iOS envoie audio/mp4 ou audio/aac — Whisper accepte .m4a, .mp4, .webm, .ogg, .wav
     const blobType = audioBlob.type || "audio/webm";
-    let fileName = "enregistrement.webm";
+    let fileName = "recording.webm";
     let fileType = "audio/webm";
-    if (blobType.includes("mp4"))       { fileName = "enregistrement.mp4"; fileType = "audio/mp4"; }
-    else if (blobType.includes("aac"))  { fileName = "enregistrement.aac"; fileType = "audio/aac"; }
-    else if (blobType.includes("ogg"))  { fileName = "enregistrement.ogg"; fileType = "audio/ogg"; }
-    else if (blobType.includes("wav"))  { fileName = "enregistrement.wav"; fileType = "audio/wav"; }
-    console.log(`[TRANSCRIPTION] Format audio : ${fileType} (${fileName})`);
+    if (blobType.includes("mp4") || blobType.includes("m4a")) {
+      fileName = "recording.m4a"; fileType = "audio/mp4";
+    } else if (blobType.includes("aac")) {
+      fileName = "recording.m4a"; fileType = "audio/mp4"; // aac -> m4a container pour Whisper
+    } else if (blobType.includes("ogg"))  { fileName = "recording.ogg"; fileType = "audio/ogg"; }
+    else if (blobType.includes("wav"))  { fileName = "recording.wav"; fileType = "audio/wav"; }
+    console.log(`[TRANSCRIPTION] Blob type reçu: "${blobType}" → Format Whisper : ${fileType} (${fileName})`);
     
     const fileForOpenAI = new File([audioBlob], fileName, { type: fileType });
     

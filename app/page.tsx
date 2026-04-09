@@ -258,29 +258,53 @@ export default function Home() {
   // ── Audio preview: process the recorded blob ──
   const processAudio = async () => {
     if (!audioBlobRef.current) return;
+
+    // Vérifier la taille — Vercel limite le body à 4.5MB
+    const blobSizeMB = audioBlobRef.current.size / (1024 * 1024);
+    console.log(`[PROCESS] Blob audio : ${blobSizeMB.toFixed(2)} MB, type: ${audioBlobRef.current.type}`);
+    if (blobSizeMB > 4.3) {
+      setMessage(`Fichier audio trop volumineux (${blobSizeMB.toFixed(1)} MB). Limitez l'enregistrement à ~2 minutes.`);
+      alert(`Audio trop volumineux : ${blobSizeMB.toFixed(1)} MB (max 4.3 MB). Réduisez la durée.`);
+      return;
+    }
+
     setStage("processing");
     setIsPlaying(false);
     if (audioRef.current) audioRef.current.pause();
 
     const formData = new FormData();
-    // Déterminer l'extension selon le type MIME (Whisper exige une extension cohérente)
+    // Déterminer l'extension selon le type MIME
+    // Safari iOS produit audio/mp4 — Whisper accepte .m4a, .mp4, .webm, .ogg, .wav
     const blobType = audioBlobRef.current.type || "";
-    let fileName = "enregistrement.webm";
-    if (blobType.includes("mp4")) fileName = "enregistrement.mp4";
-    else if (blobType.includes("aac")) fileName = "enregistrement.aac";
-    else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
+    let fileName = "recording.webm";
+    if (blobType.includes("mp4") || blobType.includes("m4a") || blobType.includes("aac")) {
+      fileName = "recording.m4a"; // m4a est le format le plus fiable pour Safari → Whisper
+    } else if (blobType.includes("ogg"))  fileName = "recording.ogg";
+    else if (blobType.includes("wav"))  fileName = "recording.wav";
+    console.log(`[PROCESS] Envoi : ${fileName} (${blobSizeMB.toFixed(2)} MB)`);
     formData.append("audio", audioBlobRef.current, fileName);
+
+    // Timeout pour connexions mobiles instables (60s)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
       const response = await fetch("/api/process-report", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        console.error("[PROCESS] Erreur HTTP", response.status, errBody);
-        throw new Error(errBody.error || `Erreur HTTP: ${response.status}`);
+        let errMsg = `Erreur serveur ${response.status}`;
+        try {
+          const errBody = await response.json();
+          errMsg = errBody.error || errMsg;
+        } catch { /* pas de JSON */ }
+        console.error("[PROCESS] Erreur HTTP", response.status, errMsg);
+        alert(`Erreur d'analyse : ${errMsg}`);
+        throw new Error(errMsg);
       }
 
       const result = await response.json();
@@ -291,8 +315,19 @@ export default function Home() {
       setReportText(buildReportText(result.report));
       setStage("review");
     } catch (error) {
-      console.error("Erreur lors du traitement du rapport :", error);
-      setMessage("Erreur serveur lors du traitement du rapport.");
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error("[PROCESS] Erreur complète :", errMsg);
+      // Alert pour debug mobile (visible même sans console)
+      if (errMsg.includes("abort")) {
+        setMessage("Délai dépassé — connexion trop lente. Réessayez en Wi-Fi.");
+        alert("Timeout : l'analyse a pris trop de temps. Réessayez en Wi-Fi.");
+      } else if (!errMsg.includes("Erreur d'analyse")) {
+        // Pas de double alert si déjà affiché plus haut
+        setMessage(errMsg || "Erreur lors du traitement du rapport.");
+        alert(`Erreur : ${errMsg}`);
+      } else {
+        setMessage(errMsg);
+      }
       setStage("idle");
     }
   };
