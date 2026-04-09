@@ -258,30 +258,16 @@ export default function Home() {
   // ── Audio preview: process the recorded blob ──
   const processAudio = async () => {
     if (!audioBlobRef.current) return;
-
-    // Vérifier la taille — Vercel limite le body à 4.5MB
-    const blobSizeMB = audioBlobRef.current.size / (1024 * 1024);
-    console.log(`[PROCESS] Blob audio : ${blobSizeMB.toFixed(2)} MB, type: ${audioBlobRef.current.type}`);
-    if (blobSizeMB > 4.3) {
-      setMessage(`Fichier audio trop volumineux (${blobSizeMB.toFixed(1)} MB). Limitez l'enregistrement à ~2 minutes.`);
-      alert(`Audio trop volumineux : ${blobSizeMB.toFixed(1)} MB (max 4.3 MB). Réduisez la durée.`);
-      return;
-    }
-
     setStage("processing");
     setIsPlaying(false);
     if (audioRef.current) audioRef.current.pause();
 
     const formData = new FormData();
-    // Déterminer l'extension selon le type MIME
-    // Safari iOS produit audio/mp4 — Whisper accepte .m4a, .mp4, .webm, .ogg, .wav
     const blobType = audioBlobRef.current.type || "";
-    let fileName = "recording.webm";
+    let fileName = "enregistrement.webm";
     if (blobType.includes("mp4") || blobType.includes("m4a") || blobType.includes("aac")) {
-      fileName = "recording.m4a"; // m4a est le format le plus fiable pour Safari → Whisper
-    } else if (blobType.includes("ogg"))  fileName = "recording.ogg";
-    else if (blobType.includes("wav"))  fileName = "recording.wav";
-    console.log(`[PROCESS] Envoi : ${fileName} (${blobSizeMB.toFixed(2)} MB)`);
+      fileName = "enregistrement.m4a";
+    } else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
     formData.append("audio", audioBlobRef.current, fileName);
 
     try {
@@ -291,26 +277,20 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        let errMsg = `Erreur serveur ${response.status}`;
-        try {
-          const errBody = await response.json();
-          errMsg = errBody.error || errMsg;
-        } catch { /* pas de JSON */ }
-        throw new Error(errMsg);
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || `Erreur HTTP: ${response.status}`);
       }
 
       const result = await response.json();
       if (result.error) throw new Error(result.error);
-      if (!result.report) throw new Error("Aucune donnée de rapport reçue de l'API.");
+      if (!result.report) throw new Error("Aucune donnée de rapport reçue.");
 
       setReport(result.report);
       setReportText(buildReportText(result.report));
       setStage("review");
     } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      console.error("[PROCESS] Erreur :", errMsg);
-      setMessage(errMsg || "Erreur lors du traitement du rapport.");
-      alert(`Erreur analyse : ${errMsg}`);
+      console.error("Erreur traitement :", error);
+      setMessage(error instanceof Error ? error.message : "Erreur serveur.");
       setStage("idle");
     }
   };

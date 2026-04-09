@@ -439,7 +439,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     if (items.length === 0) {
       doc.setFont("helvetica", "italic");
       doc.setTextColor(...MGRAY);
-      doc.text("Aucune information", ML + PAD, ty);
+      doc.text("Rien \u00e0 signaler", ML + PAD, ty);
     } else {
       for (let i = 0; i < itemInfos.length; i++) {
         const info = itemInfos[i];
@@ -560,16 +560,17 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.line(ML, y, PW - MR, y);
   y += 6;
 
-  // Only draw sections that have items — never show empty sections
-  if (travaux.length > 0)   y = drawSection("TRAVAUX REALISES",     travaux,   y, "travaux");
-  if (problemes.length > 0) y = drawSection("PROBLEMES RENCONTRES", problemes, y, "problemes");
-  if (materiel.length > 0)  y = drawSection("MATERIEL MANQUANT",    materiel,  y, "materiel");
-  if (aprevoir.length > 0)  y = drawSection("A PREVOIR / SUITE",    aprevoir,  y, "aprevoir");
+  // Always draw all 4 sections — show "Rien a signaler" when empty
+  y = drawSection("TRAVAUX REALISES",     travaux,   y, "travaux");
+  y = drawSection("PROBLEMES RENCONTRES", problemes, y, "problemes");
+  y = drawSection("MATERIEL MANQUANT",    materiel,  y, "materiel");
+  y = drawSection("A PREVOIR / SUITE",    aprevoir,  y, "aprevoir");
 
   // Certification signature block
   y = drawSignatureBlock(y);
 
-  // ── PAGE 2 — Photos ───────────────────────────────────────────────────
+  // ── PAGE 2 — Photos (large, one per row) ──────────────────────────
+  // Start photos on a new page
   doc.addPage();
   drawPageChrome();
   y = logoDataUrl ? 42 : 34;
@@ -588,35 +589,24 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setTextColor(...MGRAY);
     doc.text("Aucune photo jointe a ce rapport.", PW / 2, y + 13, { align: "center" });
   } else {
-    const COLS   = 2;
-    const GAP    = 6;
-    const CELL_W = (CW - GAP) / COLS;
-    const CELL_H = 82; // 70 + 12 for legend area
+    // One photo per row, full width for maximum size
+    const PHOTO_MAX_H = 180; // max height per photo in mm
+    const LEGEND_H = 14;
 
     for (let i = 0; i < compressedPhotos.length; i++) {
-      const col = i % COLS;
-      if (col === 0 && i > 0) y += CELL_H + GAP;
-
-      if (y + CELL_H > PH - 18) {
+      // Check if we need a new page
+      if (y + 60 > PH - 18) {
         doc.addPage();
         drawPageChrome();
         y = logoDataUrl ? 42 : 34;
       }
 
-      const x = ML + col * (CELL_W + GAP);
-
-      // Photo frame
-      doc.setFillColor(...LGRAY);
-      doc.roundedRect(x, y, CELL_W, CELL_H, 2, 2, "F");
-      doc.setDrawColor(...BGRAY);
-      doc.setLineWidth(0.4);
-      doc.roundedRect(x, y, CELL_W, CELL_H, 2, 2, "S");
-
       // Photo label
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...MGRAY);
-      doc.text("Photo " + (i + 1), x + 3, y + 6);
+      doc.text("Photo " + (i + 1), ML + 3, y + 5);
+      y += 8;
 
       try {
         const b64   = compressedPhotos[i].toString("base64");
@@ -624,30 +614,45 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
         console.log(`[PDF PHOTOS] Insertion image ${i + 1} - taille buffer: ${compressedPhotos[i].length} bytes`);
         const props = doc.getImageProperties(durl);
         console.log(`[PDF PHOTOS] Dimensions originales: ${props.width}x${props.height}`);
-        const aw    = CELL_W - 6;
-        const ah    = CELL_H - 23; // leave room for legend at bottom
-        let iw = aw;
+        
+        // Scale to full content width, respecting aspect ratio and max height
+        let iw = CW;
         let ih = iw * (props.height / props.width);
-        if (ih > ah) { ih = ah; iw = ih * (props.width / props.height); }
+        const maxH = Math.min(PHOTO_MAX_H, PH - 18 - y - LEGEND_H - 5);
+        if (ih > maxH) { ih = maxH; iw = ih * (props.width / props.height); }
         console.log(`[PDF PHOTOS] Dimensions renderees: ${iw.toFixed(1)}x${ih.toFixed(1)}mm`);
-        doc.addImage(durl, "JPEG", x + (CELL_W - iw) / 2, y + 9 + (ah - ih) / 2, iw, ih);
+
+        // Photo frame
+        doc.setFillColor(...LGRAY);
+        doc.roundedRect(ML, y, CW, ih + 4, 2, 2, "F");
+        doc.setDrawColor(...BGRAY);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(ML, y, CW, ih + 4, 2, 2, "S");
+
+        // Center image
+        doc.addImage(durl, "JPEG", ML + (CW - iw) / 2, y + 2, iw, ih);
         console.log(`[PDF PHOTOS] Image ${i + 1} inseree avec succes`);
+        y += ih + 6;
       } catch (photoErr) {
         console.error(`[PDF PHOTOS] Erreur lors de l'insertion de l'image ${i + 1}:`, photoErr);
         doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(...MGRAY);
-        doc.text("Erreur d'affichage", x + CELL_W / 2, y + CELL_H / 2, { align: "center" });
+        doc.text("Erreur d'affichage", PW / 2, y + 15, { align: "center" });
+        y += 30;
       }
 
       // Photo legend / caption
       const legend = photoLegends[i] || "";
       if (legend) {
-        doc.setFontSize(6.5);
+        doc.setFontSize(7.5);
         doc.setFont("helvetica", "italic");
         doc.setTextColor(...DGRAY);
-        const legendLines = doc.splitTextToSize(legend, CELL_W - 8);
-        doc.text(legendLines.slice(0, 2), x + 3, y + CELL_H - 9);
+        const legendLines = doc.splitTextToSize(legend, CW - 8);
+        doc.text(legendLines.slice(0, 2), ML + 3, y + 2);
+        y += LEGEND_H;
+      } else {
+        y += 4;
       }
     }
   }
