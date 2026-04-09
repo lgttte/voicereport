@@ -23,6 +23,7 @@ import {
   RotateCcw,
   Sparkles,
 } from "lucide-react";
+import Chat from "./components/Chat";
 
 type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success";
 
@@ -741,6 +742,9 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* Chat flottant */}
+      <Chat />
     </main>
   );
 }
