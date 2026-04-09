@@ -559,11 +559,11 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.line(ML, y, PW - MR, y);
   y += 6;
 
-  // Always draw Travaux & Problèmes; skip Matériel & À prévoir if empty
+  // Always draw all 4 sections
   y = drawSection("TRAVAUX R\u00c9ALIS\u00c9S",       travaux,   y, "travaux");
   y = drawSection("PROBL\u00c8MES RENCONTR\u00c9S", problemes, y, "problemes");
-  if (materiel.length > 0)  y = drawSection("MAT\u00c9RIEL MANQUANT",      materiel,  y, "materiel");
-  if (aprevoir.length > 0)  y = drawSection("\u00c0 PR\u00c9VOIR / SUITE",      aprevoir,  y, "aprevoir");
+  y = drawSection("MAT\u00c9RIEL MANQUANT",      materiel,  y, "materiel");
+  y = drawSection("\u00c0 PR\u00c9VOIR / SUITE",      aprevoir,  y, "aprevoir");
 
   // Certification signature block
   y = drawSignatureBlock(y);
