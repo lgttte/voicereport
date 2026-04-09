@@ -86,7 +86,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex w-[360px] flex-col overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/40">
+    <div className="fixed bottom-0 right-0 z-50 flex w-full max-w-[360px] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/40 sm:bottom-6 sm:right-6 max-h-[85vh]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-700/60 bg-slate-800/80 px-4 py-3">
         <div className="flex items-center gap-2.5">

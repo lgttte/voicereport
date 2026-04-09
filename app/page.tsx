@@ -165,6 +165,13 @@ export default function Home() {
 
   const handleButtonClick = async () => {
     if (stage === "idle") {
+      // Vérifier que le contexte est sécurisé (HTTPS ou localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setMessage("Votre navigateur ne supporte pas la capture audio. Utilisez HTTPS ou un navigateur récent.");
+        console.error("[AUDIO] navigator.mediaDevices indisponible — contexte non-sécurisé ou navigateur ancien");
+        return;
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -175,30 +182,69 @@ export default function Home() {
             channelCount: { ideal: 1 },
           },
         });
-        mediaRecorderRef.current = new MediaRecorder(stream);
+
+        // Déterminer le format audio compatible avec le navigateur
+        // Safari iOS ne supporte pas audio/webm — utiliser mp4/aac
+        let mimeType = "audio/webm;codecs=opus";
+        if (typeof MediaRecorder.isTypeSupported === "function") {
+          if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+            mimeType = "audio/webm;codecs=opus";
+          } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+            mimeType = "audio/webm";
+          } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+            mimeType = "audio/mp4";
+          } else if (MediaRecorder.isTypeSupported("audio/aac")) {
+            mimeType = "audio/aac";
+          } else {
+            // Fallback : laisser le navigateur choisir
+            mimeType = "";
+          }
+        }
+        console.log("[AUDIO] Format sélectionné :", mimeType || "défaut navigateur");
+
+        const recorderOptions: MediaRecorderOptions = {};
+        if (mimeType) recorderOptions.mimeType = mimeType;
+        mediaRecorderRef.current = new MediaRecorder(stream, recorderOptions);
         chunksRef.current = [];
 
         mediaRecorderRef.current.ondataavailable = (event) => {
-          chunksRef.current.push(event.data);
+          if (event.data.size > 0) chunksRef.current.push(event.data);
         };
 
         mediaRecorderRef.current.onstop = () => {
-          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const actualMime = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
+          const blob = new Blob(chunksRef.current, { type: actualMime });
+          console.log("[AUDIO] Enregistrement terminé :", (blob.size / 1024).toFixed(1), "KB, type:", actualMime);
           audioBlobRef.current = blob;
           const url = URL.createObjectURL(blob);
           setAudioUrl(url);
           setStage("preview");
         };
 
-        mediaRecorderRef.current.start();
+        mediaRecorderRef.current.onerror = (event) => {
+          console.error("[AUDIO] Erreur MediaRecorder :", event);
+          setMessage("Erreur lors de l'enregistrement audio.");
+          setStage("idle");
+        };
+
+        mediaRecorderRef.current.start(1000); // timeslice 1s pour Safari
         setStage("recording");
 
         timerRef.current = setInterval(() => {
           setElapsed((prev) => prev + 1);
         }, 1000);
       } catch (error) {
-        console.error("Erreur d'accès au microphone :", error);
-        setMessage("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres.");
+        const err = error instanceof Error ? error : new Error(String(error));
+        console.error("[AUDIO] Erreur d'accès au microphone :", err.name, err.message);
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setMessage("Accès au microphone refusé. Autorisez le micro dans les paramètres de votre navigateur.");
+        } else if (err.name === "NotFoundError") {
+          setMessage("Aucun microphone détecté sur cet appareil.");
+        } else if (err.name === "NotReadableError") {
+          setMessage("Microphone déjà utilisé par une autre application.");
+        } else {
+          setMessage("Impossible d'accéder au microphone : " + err.message);
+        }
       }
     } else if (stage === "recording") {
       if (mediaRecorderRef.current) {
@@ -217,7 +263,13 @@ export default function Home() {
     if (audioRef.current) audioRef.current.pause();
 
     const formData = new FormData();
-    formData.append("audio", audioBlobRef.current);
+    // Déterminer l'extension selon le type MIME (Whisper exige une extension cohérente)
+    const blobType = audioBlobRef.current.type || "";
+    let fileName = "enregistrement.webm";
+    if (blobType.includes("mp4")) fileName = "enregistrement.mp4";
+    else if (blobType.includes("aac")) fileName = "enregistrement.aac";
+    else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
+    formData.append("audio", audioBlobRef.current, fileName);
 
     try {
       const response = await fetch("/api/process-report", {
@@ -225,7 +277,11 @@ export default function Home() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        console.error("[PROCESS] Erreur HTTP", response.status, errBody);
+        throw new Error(errBody.error || `Erreur HTTP: ${response.status}`);
+      }
 
       const result = await response.json();
       if (result.error) throw new Error(result.error);

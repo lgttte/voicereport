@@ -78,8 +78,8 @@ function postCorrectBTP(text: string): string {
   return corrected;
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+// Clients instanciés à la demande (pas au niveau global)
+// pour éviter les erreurs de build si les env vars manquent
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 
 function safeArray(value: unknown): string[] {
@@ -324,9 +324,23 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Instancier les clients à la demande (pas au niveau global)
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "" });
+
     // Étape 2 : Transcription audio (Whisper)
     console.log(`[TRANSCRIPTION] Envoi à OpenAI Whisper`);
-    const fileForOpenAI = new File([audioBlob], 'enregistrement.webm', { type: 'audio/webm' });
+    // Déterminer le type MIME et nom de fichier cohérent pour Whisper
+    const blobType = audioBlob.type || "audio/webm";
+    let fileName = "enregistrement.webm";
+    let fileType = "audio/webm";
+    if (blobType.includes("mp4"))       { fileName = "enregistrement.mp4"; fileType = "audio/mp4"; }
+    else if (blobType.includes("aac"))  { fileName = "enregistrement.aac"; fileType = "audio/aac"; }
+    else if (blobType.includes("ogg"))  { fileName = "enregistrement.ogg"; fileType = "audio/ogg"; }
+    else if (blobType.includes("wav"))  { fileName = "enregistrement.wav"; fileType = "audio/wav"; }
+    console.log(`[TRANSCRIPTION] Format audio : ${fileType} (${fileName})`);
+    
+    const fileForOpenAI = new File([audioBlob], fileName, { type: fileType });
     
     const transcriptionResponse = await openai.audio.transcriptions.create({
       file: fileForOpenAI,
