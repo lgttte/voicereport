@@ -409,7 +409,7 @@ export default function Home() {
     { title: "Problèmes rencontrés", items: report?.problemes_rencontres || [], icon: ShieldAlert },
     { title: "Matériel manquant",    items: report?.materiel_manquant || [],    icon: Package },
     { title: "À prévoir",            items: report?.a_prevoir || [],            icon: CalendarDays },
-  ].filter(s => s.items.length > 0);
+  ];
 
   if (stage !== "review") {
     const isRecording = stage === "recording";
@@ -565,14 +565,7 @@ export default function Home() {
 
           {/* Button container — flat design */}
           <div className="relative flex items-center justify-center">
-            {/* Concentric ripple — inner ping */}
-            {isRecording && (
-              <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-36 w-36 rounded-full bg-red-500/20 animate-ping" />
-            )}
-            {/* Concentric ripple — outer pulse ring */}
-            {isRecording && (
-              <span className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-44 w-44 rounded-full border border-red-500/15 animate-pulse" />
-            )}
+
 
             <button
               type="button"
@@ -704,7 +697,9 @@ export default function Home() {
                         </li>
                       ))}
                     </ul>
-                  ) : null}
+                  ) : (
+                    <p className="text-sm text-slate-500 italic">Rien à signaler</p>
+                  )}
                 </div>
               );
             })}
