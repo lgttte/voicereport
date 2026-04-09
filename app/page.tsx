@@ -284,17 +284,11 @@ export default function Home() {
     console.log(`[PROCESS] Envoi : ${fileName} (${blobSizeMB.toFixed(2)} MB)`);
     formData.append("audio", audioBlobRef.current, fileName);
 
-    // Timeout pour connexions mobiles instables (60s)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 60000);
-
     try {
       const response = await fetch("/api/process-report", {
         method: "POST",
         body: formData,
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
 
       if (!response.ok) {
         let errMsg = `Erreur serveur ${response.status}`;
@@ -302,8 +296,6 @@ export default function Home() {
           const errBody = await response.json();
           errMsg = errBody.error || errMsg;
         } catch { /* pas de JSON */ }
-        console.error("[PROCESS] Erreur HTTP", response.status, errMsg);
-        alert(`Erreur d'analyse : ${errMsg}`);
         throw new Error(errMsg);
       }
 
@@ -316,18 +308,9 @@ export default function Home() {
       setStage("review");
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      console.error("[PROCESS] Erreur complète :", errMsg);
-      // Alert pour debug mobile (visible même sans console)
-      if (errMsg.includes("abort")) {
-        setMessage("Délai dépassé — connexion trop lente. Réessayez en Wi-Fi.");
-        alert("Timeout : l'analyse a pris trop de temps. Réessayez en Wi-Fi.");
-      } else if (!errMsg.includes("Erreur d'analyse")) {
-        // Pas de double alert si déjà affiché plus haut
-        setMessage(errMsg || "Erreur lors du traitement du rapport.");
-        alert(`Erreur : ${errMsg}`);
-      } else {
-        setMessage(errMsg);
-      }
+      console.error("[PROCESS] Erreur :", errMsg);
+      setMessage(errMsg || "Erreur lors du traitement du rapport.");
+      alert(`Erreur analyse : ${errMsg}`);
       setStage("idle");
     }
   };
@@ -356,10 +339,6 @@ export default function Home() {
     setIsSending(true);
     setMessage(null);
 
-    // Timeout pour connexions mobiles (90s — génération PDF + envoi)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90000);
-
     try {
       const formData = new FormData();
       formData.append("report", JSON.stringify(report));
@@ -370,14 +349,10 @@ export default function Home() {
         formData.append("photos", photo.file);
       });
 
-      console.log(`[ENVOI] Début envoi — ${photoPreviews.length} photo(s), email: ${recipientEmail}`);
-
       const response = await fetch("/api/send-email", {
         method: "POST",
         body: formData,
-        signal: controller.signal,
       });
-      clearTimeout(timeout);
 
       if (!response.ok) {
         let errMsg = `Erreur serveur ${response.status}`;
@@ -385,7 +360,6 @@ export default function Home() {
           const result = await response.json();
           errMsg = result.error || errMsg;
         } catch { /* pas de JSON */ }
-        console.error("[ENVOI] Erreur HTTP", response.status, errMsg);
         alert(`Erreur d'envoi : ${errMsg}`);
         throw new Error(errMsg);
       }
@@ -397,14 +371,9 @@ export default function Home() {
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       console.error("[ENVOI] Erreur :", errMsg);
-      if (errMsg.includes("abort")) {
-        setMessage("Délai dépassé — l'envoi a pris trop de temps. Réessayez en Wi-Fi.");
-        alert("Timeout : l'envoi a pris trop de temps. Réessayez en Wi-Fi.");
-      } else if (!errMsg.includes("Erreur d'envoi")) {
-        setMessage(errMsg || "Erreur lors de l'envoi du rapport.");
+      setMessage(errMsg || "Erreur lors de l'envoi du rapport.");
+      if (!errMsg.includes("Erreur d'envoi")) {
         alert(`Erreur envoi : ${errMsg}`);
-      } else {
-        setMessage(errMsg);
       }
     } finally {
       setIsSending(false);
