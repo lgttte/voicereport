@@ -35,6 +35,20 @@ const WHISPER_BTP_PROMPT = [
   "mini-pelle, nacelle, compacteur, disqueuse, perforateur, banche,",
   "livraison, retard, intempéries, fissure, malfaçon, réserve,",
   "sous-traitant, maître d'œuvre, conducteur de travaux, chef de chantier.",
+  "Villes et lieux : Paris, Marseille, Lyon, Toulouse, Nice, Nantes,",
+  "Montpellier, Strasbourg, Bordeaux, Lille, Rennes, Reims, Toulon,",
+  "Saint-Étienne, Le Havre, Grenoble, Dijon, Angers, Nîmes, Villeurbanne,",
+  "Clermont-Ferrand, Le Mans, Aix-en-Provence, Brest, Tours, Amiens,",
+  "Limoges, Perpignan, Metz, Besançon, Orléans, Rouen, Mulhouse,",
+  "Caen, Nancy, Argenteuil, Montreuil, Saint-Denis, Créteil, Nanterre,",
+  "Versailles, Cergy, Évry, Meaux, Pontoise, Colombes, Courbevoie,",
+  "Vitry-sur-Seine, Aubervilliers, Pantin, Bobigny, Drancy, Bondy,",
+  "Boulogne-Billancourt, Saint-Ouen, Ivry-sur-Seine, Maisons-Alfort,",
+  "Châtillon, Clamart, Meudon, Sèvres, Rueil-Malmaison, Poissy,",
+  "Clichy, Levallois-Perret, Neuilly-sur-Seine, Sarcelles, Garges,",
+  "Villepinte, Tremblay, Aulnay-sous-Bois, Sevran, Noisy-le-Grand,",
+  "Champs-sur-Marne, Torcy, Lagny, Melun, Fontainebleau, Corbeil,",
+  "Saint-Germain-en-Laye, Sartrouville, Houilles, Bezons, Gennevilliers.",
 ].join(" ");
 
 /** Post-correction dictionary: fix frequent Whisper misrecognitions for BTP terms */
@@ -384,7 +398,7 @@ export async function POST(request: NextRequest) {
       `- Probleme urgent/bloquant/critique = "Situation critique" ` +
       `\n\nReponds UNIQUEMENT avec un objet JSON. Inclus UNIQUEMENT les cles pour lesquelles tu as de l'information : ` +
       `- statut_global (OBLIGATOIRE) : exactement "Bon deroulement", "Quelques difficultes", ou "Situation critique" ` +
-      `- lieu_chantier (si mentionne) : nom, adresse, ou juste la ville — ce que l'ouvrier a dit ` +
+      `- lieu_chantier (si mentionne) : nom du chantier, adresse, ou ville. IMPORTANT : corrige l'orthographe des noms de villes francaises si la transcription les a mal ecrites (ex: "ma saille" = Marseille, "lion" = Lyon, "too loose" = Toulouse). Ecris le nom correct de la ville. ` +
       `- rapporteur (si mentionne) : nom et/ou poste de la personne qui parle ` +
       `- meteo (si mentionnee) : conditions meteo en quelques mots ` +
       `- equipe (si mentionne) : effectif present, ex "8 personnes" ou "equipe complete" ` +
