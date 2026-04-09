@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Sharp needs to be treated as external on serverless
+  serverExternalPackages: ["sharp"],
   // Enable PWA headers for service worker scope
   async headers() {
     return [
