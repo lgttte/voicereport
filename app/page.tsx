@@ -422,15 +422,15 @@ export default function Home() {
           <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-72 w-72 rounded-full bg-emerald-500/10 blur-[80px]" />
 
           <div className="relative z-10 flex flex-col items-center w-full max-w-sm text-center">
-            <CheckCircle className="h-24 w-24 text-emerald-400 animate-bounce mb-8" />
-            <h1 className="text-3xl font-bold text-white mb-3">Rapport envoyé avec succès&nbsp;!</h1>
-            <p className="text-base text-slate-400 mb-10 leading-relaxed">
+            <CheckCircle className="h-24 w-24 text-emerald-400 animate-scaleIn mb-8" />
+            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">Rapport envoyé avec succès&nbsp;!</h1>
+            <p className="text-base text-slate-400 mb-10 leading-relaxed animate-fadeInUp stagger-3">
               Le récapitulatif a bien été transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span>.
             </p>
             <button
               type="button"
               onClick={resetFlow}
-              className="flex items-center gap-2.5 rounded-xl bg-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2.5 rounded-xl bg-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] animate-fadeInUp stagger-4"
             >
               <Mic className="h-4 w-4" />
               Faire un nouveau rapport
@@ -452,7 +452,6 @@ export default function Home() {
             className="hidden"
             onLoadedMetadata={() => {
               if (audioRef.current) {
-                // webm duration may be Infinity until played; fallback to elapsed
                 const d = audioRef.current.duration;
                 setAudioDuration(Number.isFinite(d) ? d : elapsed);
               }
@@ -467,15 +466,15 @@ export default function Home() {
           />
 
           <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
-            <p className="mb-3 text-center text-lg font-light text-white/80">
+            <p className="mb-3 text-center text-lg font-light text-white/80 animate-fadeIn">
               Vérifiez votre enregistrement
             </p>
-            <p className="mb-10 text-center text-sm font-light text-slate-400">
+            <p className="mb-10 text-center text-sm font-light text-slate-400 animate-fadeIn stagger-1">
               Réécoutez avant de lancer l&apos;analyse IA
             </p>
 
             {/* Pill audio player */}
-            <div className="bg-slate-800/40 border border-slate-700/50 rounded-full backdrop-blur-md p-2 flex items-center gap-4 w-full max-w-sm mx-auto">
+            <div className="bg-slate-800/40 border border-slate-700/50 rounded-full backdrop-blur-md p-2 flex items-center gap-4 w-full max-w-sm mx-auto animate-scaleIn stagger-2">
               {/* Play / Pause button */}
               <button
                 type="button"
@@ -500,11 +499,11 @@ export default function Home() {
             </div>
 
             {/* Action buttons */}
-            <div className="mt-10 flex flex-col items-center gap-4 w-full">
+            <div className="mt-10 flex flex-col items-center gap-4 w-full animate-fadeInUp stagger-3">
               <button
                 type="button"
                 onClick={processAudio}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-sm font-semibold text-black transition hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98]"
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-sm font-semibold text-black transition-all duration-200 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Sparkles className="h-4 w-4" />
                 Générer le rapport
@@ -527,14 +526,14 @@ export default function Home() {
     if (stage === "processing") {
       return (
         <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-          <div className="flex flex-col items-center gap-5">
-            <div className="flex h-36 w-36 items-center justify-center rounded-full">
+          <div className="flex flex-col items-center gap-5 animate-fadeIn">
+            <div className="flex h-36 w-36 items-center justify-center rounded-full animate-scaleIn">
               <Loader2 className="h-14 w-14 text-sky-400 animate-spin" />
             </div>
-            <p className="text-base font-light text-sky-400 animate-pulse">
+            <p className="text-base font-light text-sky-400 animate-pulse animate-fadeInUp stagger-2">
               Analyse de votre rapport en cours...
             </p>
-            <p className="text-sm font-light text-slate-500">
+            <p className="text-sm font-light text-slate-500 animate-fadeInUp stagger-3">
               Notre IA structure votre rapport...
             </p>
           </div>
@@ -570,7 +569,7 @@ export default function Home() {
             <button
               type="button"
               onClick={handleButtonClick}
-              className={`relative z-10 flex h-36 w-36 items-center justify-center rounded-full shadow-none text-white transition-all duration-200 focus:outline-none active:scale-95 ${
+              className={`relative z-10 flex h-36 w-36 items-center justify-center rounded-full shadow-none text-white transition-all duration-300 focus:outline-none active:scale-95 ${
                 isRecording
                   ? "bg-red-700 hover:bg-red-600"
                   : "bg-red-600 hover:bg-red-500 hover:scale-105"
@@ -598,10 +597,10 @@ export default function Home() {
                 { icon: AlertTriangle, title: "Problèmes",  example: "ex: Retard livraison, intempéries" },
                 { icon: Package,       title: "Matériel",   example: "ex: Il manque 5 sacs de ciment" },
               ] as { icon: React.ElementType; title: string; example: string }[]).map(
-                ({ icon: Icon, title, example }) => (
+                ({ icon: Icon, title, example }, idx) => (
                   <div
                     key={title}
-                    className="flex items-center gap-3 rounded-2xl bg-slate-800/40 hover:bg-slate-800/60 transition-colors p-3 px-4"
+                    className={`flex items-center gap-3 rounded-2xl bg-slate-800/40 hover:bg-slate-800/60 transition-colors duration-200 p-3 px-4 animate-fadeInUp stagger-${idx + 3}`}
                   >
                     <Icon className="h-4 w-4 shrink-0 text-slate-500" />
                     <span className="text-white text-sm font-medium drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{title}</span>
@@ -614,7 +613,7 @@ export default function Home() {
 
           {/* Example — minimalist quote */}
           {!isRecording && (
-            <div className="border-l-[1.5px] border-slate-800 pl-4 py-1 mt-8">
+            <div className="border-l-[1.5px] border-slate-800 pl-4 py-1 mt-8 animate-fadeIn stagger-7">
               <p className="text-slate-300 font-light text-sm italic leading-relaxed">
                 &laquo;&nbsp;On a fini de couler la dalle chez Dupont. Par contre la toupie est arrivée en retard de 2h, et il nous manque du ciment pour demain.&nbsp;&raquo;
               </p>
@@ -634,7 +633,7 @@ export default function Home() {
         {/* Statut global — hero badge (tout en haut, très grand) */}
         {statutRaw && (
           <div
-            className={`rounded-2xl border-2 px-5 py-5 text-center ${statutStyles[statutLevel]}`}
+            className={`rounded-2xl border-2 px-5 py-5 text-center animate-scaleIn ${statutStyles[statutLevel]}`}
           >
             <p className="text-2xl font-bold leading-tight">{statutRaw}</p>
           </div>
@@ -648,7 +647,7 @@ export default function Home() {
         )}
 
         {/* Lieu + Titre */}
-        <div className="space-y-1">
+        <div className="space-y-1 animate-fadeIn stagger-1">
           {report?.lieu_chantier && (
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <MapPin className="h-3.5 w-3.5" />
@@ -675,12 +674,12 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-3">
-            {reportSections.map((section) => {
+            {reportSections.map((section, idx) => {
               const hasItems = section.items.length > 0;
               return (
                 <div
                   key={section.title}
-                  className="rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+                  className={`rounded-xl border border-slate-800 bg-slate-900/50 p-4 animate-fadeInUp stagger-${idx + 2}`}
                 >
                   <div className="mb-2 flex items-center gap-2.5">
                     <section.icon className="h-4 w-4 shrink-0 text-slate-500" />
@@ -707,7 +706,7 @@ export default function Home() {
         )}
 
         {/* Photos */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 animate-fadeInUp stagger-6">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Photos chantier
@@ -771,7 +770,7 @@ export default function Home() {
         </div>
 
         {/* Zone email */}
-        <div className="space-y-2">
+        <div className="space-y-2 animate-fadeInUp stagger-7">
           <label
             htmlFor="email-input"
             className="text-xs font-semibold uppercase tracking-wider text-slate-400"
@@ -796,7 +795,7 @@ export default function Home() {
           type="button"
           onClick={handleSendReport}
           disabled={isSending}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 animate-fadeInUp stagger-8"
         >
           {isSending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
