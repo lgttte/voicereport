@@ -5,6 +5,9 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
+// Route segment config — génération PDF + compression photos + envoi email prend du temps
+export const maxDuration = 60;
+
 type SendEmailRequest = {
   report: string;
   pdfBuffer?: string;
@@ -832,10 +835,14 @@ export async function POST(request: NextRequest) {
       attachments,
     });
 
-    const emailResponseId =
-      typeof emailResponse === "object" && emailResponse !== null && "id" in emailResponse
-        ? String((emailResponse as { id?: unknown }).id ?? "N/A")
-        : "N/A";
+    // Resend SDK v2 retourne { data, error }
+    const resp = emailResponse as { data?: { id?: string } | null; error?: { message?: string; name?: string } | null; id?: string };
+    if (resp.error) {
+      console.error(`[EMAIL ERREUR] Resend a retourné une erreur:`, resp.error);
+      throw new Error(resp.error.message || "Erreur Resend inconnue");
+    }
+
+    const emailResponseId = resp.data?.id || resp.id || "N/A";
 
     console.log(`[EMAIL] ✅ Email envoyé avec succès`);
     console.log(`[EMAIL]   ID de reponse: ${emailResponseId}`);

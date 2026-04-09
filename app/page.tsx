@@ -356,6 +356,10 @@ export default function Home() {
     setIsSending(true);
     setMessage(null);
 
+    // Timeout pour connexions mobiles (90s — génération PDF + envoi)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+
     try {
       const formData = new FormData();
       formData.append("report", JSON.stringify(report));
@@ -366,14 +370,24 @@ export default function Home() {
         formData.append("photos", photo.file);
       });
 
+      console.log(`[ENVOI] Début envoi — ${photoPreviews.length} photo(s), email: ${recipientEmail}`);
+
       const response = await fetch("/api/send-email", {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || "Impossible d'envoyer le rapport.");
+        let errMsg = `Erreur serveur ${response.status}`;
+        try {
+          const result = await response.json();
+          errMsg = result.error || errMsg;
+        } catch { /* pas de JSON */ }
+        console.error("[ENVOI] Erreur HTTP", response.status, errMsg);
+        alert(`Erreur d'envoi : ${errMsg}`);
+        throw new Error(errMsg);
       }
 
       const result = await response.json();
@@ -381,8 +395,17 @@ export default function Home() {
       setMessage(result.message ?? "Rapport envoyé avec succès !");
       setStage("success");
     } catch (error) {
-      console.error("Erreur lors de l'envoi :", error);
-      setMessage(error instanceof Error ? error.message : "Erreur lors de l'envoi du rapport.");
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error("[ENVOI] Erreur :", errMsg);
+      if (errMsg.includes("abort")) {
+        setMessage("Délai dépassé — l'envoi a pris trop de temps. Réessayez en Wi-Fi.");
+        alert("Timeout : l'envoi a pris trop de temps. Réessayez en Wi-Fi.");
+      } else if (!errMsg.includes("Erreur d'envoi")) {
+        setMessage(errMsg || "Erreur lors de l'envoi du rapport.");
+        alert(`Erreur envoi : ${errMsg}`);
+      } else {
+        setMessage(errMsg);
+      }
     } finally {
       setIsSending(false);
     }
