@@ -36,6 +36,10 @@ import {
   CircleDot,
 } from "lucide-react";
 import Chat from "./components/Chat";
+import UserSetup from "./components/UserSetup";
+import EliteDashboard from "./components/EliteDashboard";
+import type { UserProfile, GeoLocation } from "./lib/types";
+import { loadUser, saveUser, clearHistory } from "./lib/storage";
 
 type Stage = "idle" | "recording" | "preview" | "enrich" | "processing" | "review" | "success" | "dashboard";
 
@@ -124,10 +128,14 @@ type SavedReport = {
   date: string;
   report: ReportSections;
   recipientEmail: string;
+  userName?: string;
+  userRole?: string;
+  geo?: { lat: number; lng: number; accuracy: number } | null;
+  enrichment?: EnrichmentData | null;
 };
 
 const HISTORY_KEY = "voicereport_history";
-const MAX_HISTORY = 50;
+const MAX_HISTORY = 100;
 const OFFLINE_QUEUE_KEY = "voicereport_offline_queue";
 
 const ENCOURAGEMENT_PHRASES = [
@@ -181,13 +189,18 @@ function loadHistory(): SavedReport[] {
   } catch { return []; }
 }
 
-function saveToHistory(report: ReportSections, recipientEmail: string) {
+function saveToHistory(
+  report: ReportSections,
+  recipientEmail: string,
+  extra?: { userName?: string; userRole?: string; geo?: { lat: number; lng: number; accuracy: number } | null; enrichment?: EnrichmentData | null }
+) {
   const history = loadHistory();
   const entry: SavedReport = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     date: new Date().toISOString(),
     report,
     recipientEmail,
+    ...extra,
   };
   history.unshift(entry);
   if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
@@ -310,6 +323,10 @@ export default function Home() {
   const [enrichUrgent, setEnrichUrgent] = useState<boolean | null>(null);
   const [enrichTypeJournee, setEnrichTypeJournee] = useState<"normal" | "retard" | "blocage" | "incident" | null>(null);
   const [enrichment, setEnrichment] = useState<EnrichmentData | null>(null);
+  // ── User profile + GPS ──
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [currentGeo, setCurrentGeo] = useState<GeoLocation | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -337,6 +354,10 @@ export default function Home() {
     setChantierList(list);
     const lastId = localStorage.getItem(LAST_CHANTIER_KEY);
     if (lastId) setEnrichSelectedChantier(lastId);
+    // Load user profile
+    const user = loadUser();
+    setCurrentUser(user);
+    setUserLoaded(true);
     return () => stopTimer();
   }, [stopTimer]);
 
@@ -520,6 +541,19 @@ export default function Home() {
 
         mediaRecorderRef.current.start(1000); // timeslice 1s pour Safari
         setStage("recording");
+        setCurrentGeo(null);
+
+        // Capture GPS position silently
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setCurrentGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+              console.log("[GPS] Position capturée:", pos.coords.latitude.toFixed(4), pos.coords.longitude.toFixed(4));
+            },
+            (err) => console.log("[GPS] Non disponible:", err.message),
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+          );
+        }
 
         timerRef.current = setInterval(() => {
           setElapsed((prev) => prev + 1);
@@ -655,7 +689,7 @@ export default function Home() {
         saveOfflineQueue(queue);
         setOfflineQueue(queue);
         setOfflineBanner(true);
-        saveToHistory(report, recipientEmail);
+        saveToHistory(report, recipientEmail, { userName: currentUser?.name, userRole: currentUser?.role, geo: currentGeo, enrichment });
         setSavedReports(loadHistory());
         localStorage.setItem("lastRecipientEmail", recipientEmail);
         setMessage("Rapport sauvegardé ! Il sera envoyé automatiquement dès le retour du réseau.");
@@ -697,7 +731,7 @@ export default function Home() {
       const result = await response.json();
       localStorage.setItem("lastRecipientEmail", recipientEmail);
       if (report) {
-        saveToHistory(report, recipientEmail);
+        saveToHistory(report, recipientEmail, { userName: currentUser?.name, userRole: currentUser?.role, geo: currentGeo, enrichment });
         setSavedReports(loadHistory());
       }
       setMessage(result.message ?? "Rapport envoyé avec succès !");
@@ -746,6 +780,16 @@ export default function Home() {
     { title: "À prévoir",            items: report?.a_prevoir || [],            icon: CalendarDays },
   ];
 
+  // ── User setup gate: show on first launch ──
+  if (userLoaded && !currentUser) {
+    return (
+      <UserSetup onComplete={(user) => {
+        saveUser(user);
+        setCurrentUser(user);
+      }} />
+    );
+  }
+
   if (stage !== "review") {
     const isRecording = stage === "recording";
 
@@ -788,287 +832,14 @@ export default function Home() {
 
     // ── Dashboard screen ──
     if (stage === "dashboard") {
-      const chantiers = buildChantiers(savedReports);
-      const total = chantiers.length;
-      const okCount = chantiers.filter(c => c.status === "green").length;
-      const warnCount = chantiers.filter(c => c.status === "orange" || c.status === "red").length;
-      const critCount = chantiers.filter(c => c.status === "red").length;
-      const needAttention = chantiers.filter(c => c.status === "red" || c.status === "orange");
-      const allAlertes = chantiers.flatMap(c => c.alertes.map(a => ({ chantier: c.name, text: a, status: c.status })));
-      const statusEmoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
-      const statusLabel: Record<string, string> = { green: "OK", orange: "Attention", red: "Critique", none: "—" };
-
-      // ── Report detail sub-view ──
-      if (dashboardReportDetail) {
-        const r = dashboardReportDetail.report;
-        const sl = getStatusLevel(r.statut_global);
-        const detailSections = [
-          { title: "Travaux réalisés",     items: r.travaux_realises || [] },
-          { title: "Problèmes rencontrés", items: r.problemes_rencontres || [] },
-          { title: "Matériel manquant",    items: r.materiel_manquant || [] },
-          { title: "À prévoir",            items: r.a_prevoir || [] },
-        ];
-        return (
-          <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
-            <div className="mx-auto w-full max-w-md space-y-4">
-              <button type="button" onClick={() => setDashboardReportDetail(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-2">
-                <ChevronRight className="h-4 w-4 rotate-180" /> Retour
-              </button>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-white">{statusEmoji[sl]} {r.lieu_chantier || "Rapport"}</span>
-                  {r.score && <span className="text-lg font-bold text-amber-400">{r.score}/10</span>}
-                </div>
-                <p className="text-xs text-slate-500">{new Date(dashboardReportDetail.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} — {dashboardReportDetail.recipientEmail}</p>
-                {r.synthese && <p className="text-sm italic text-slate-300">&laquo;&nbsp;{r.synthese}&nbsp;&raquo;</p>}
-                <p className="text-sm text-slate-300">{r.statut_global}</p>
-                {r.equipe && <p className="text-xs text-slate-400">👷 Équipe : {r.equipe}</p>}
-                {r.avancement && <p className="text-xs text-slate-400">📊 Avancement : {r.avancement}</p>}
-                {(r.alertes && r.alertes.length > 0) && (
-                  <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3">
-                    <p className="text-xs font-semibold text-red-400 mb-1">⚠️ Alertes</p>
-                    {r.alertes.map((a, i) => <p key={i} className="text-xs text-red-300">• {a}</p>)}
-                  </div>
-                )}
-                {detailSections.map(s => (
-                  <div key={s.title}>
-                    <p className="text-xs font-semibold text-slate-400 mb-1">{s.title}</p>
-                    {s.items.length > 0 ? s.items.map((item, i) => {
-                      const { level, text } = parseSeverity(item);
-                      return <p key={i} className={`text-sm ${level === "critique" ? "text-red-400" : level === "attention" ? "text-amber-400" : "text-slate-300"}`}>• {text}</p>;
-                    }) : <p className="text-xs text-slate-600 italic">Rien à signaler</p>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </main>
-        );
-      }
-
-      // ── Chantier detail sub-view ──
-      if (dashboardChantier) {
-        const c = dashboardChantier;
-        return (
-          <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
-            <div className="mx-auto w-full max-w-md space-y-4">
-              <button type="button" onClick={() => setDashboardChantier(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
-                <ChevronRight className="h-4 w-4 rotate-180" /> Dashboard
-              </button>
-
-              {/* Chantier header */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 animate-fadeIn">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-bold text-white">{statusEmoji[c.status]} {c.name}</h2>
-                  {c.score !== null && <span className={`text-xl font-bold ${c.score >= 7 ? "text-emerald-400" : c.score >= 5 ? "text-amber-400" : "text-red-400"}`}>{c.score}/10</span>}
-                </div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.status === "green" ? "bg-emerald-500/15 text-emerald-400" : c.status === "orange" ? "bg-amber-500/15 text-amber-400" : c.status === "red" ? "bg-red-500/15 text-red-400" : "bg-slate-700 text-slate-400"}`}>
-                    {statusLabel[c.status]}
-                  </span>
-                  <span className="text-xs text-slate-500">{c.allReports.length} rapport{c.allReports.length > 1 ? "s" : ""}</span>
-                </div>
-                {c.latestReport.report.synthese && (
-                  <p className="text-sm italic text-slate-300 mb-3">&laquo;&nbsp;{c.latestReport.report.synthese}&nbsp;&raquo;</p>
-                )}
-                {c.alertes.length > 0 && (
-                  <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 mb-3">
-                    <p className="text-xs font-semibold text-red-400 mb-1.5">⚠️ Alertes actives</p>
-                    {c.alertes.map((a, i) => <p key={i} className="text-xs text-red-300">• {a}</p>)}
-                  </div>
-                )}
-                {c.topProblems.length > 0 && (
-                  <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
-                    <p className="text-xs font-semibold text-amber-400 mb-1.5">🔧 Problèmes en cours</p>
-                    {c.topProblems.map((p, i) => <p key={i} className="text-xs text-amber-300">• {p}</p>)}
-                  </div>
-                )}
-              </div>
-
-              {/* Reports timeline */}
-              <h3 className="text-sm font-semibold text-slate-400 flex items-center gap-2">
-                <Clock className="h-4 w-4" /> Historique des rapports
-              </h3>
-              <div className="space-y-2">
-                {c.allReports.map((sr) => {
-                  const sl = getStatusLevel(sr.report.statut_global);
-                  return (
-                    <button
-                      type="button"
-                      key={sr.id}
-                      onClick={() => setDashboardReportDetail(sr)}
-                      className="w-full rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-left transition-all hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
-                    >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs font-medium text-white">{statusEmoji[sl]} {new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
-                        <div className="flex items-center gap-2">
-                          {sr.report.score && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
-                          <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
-                        </div>
-                      </div>
-                      {sr.report.synthese && <p className="text-[11px] text-slate-500 line-clamp-1">{sr.report.synthese}</p>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </main>
-        );
-      }
-
-      // ── Main dashboard view ──
       return (
-        <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
-          <div className="mx-auto w-full max-w-md space-y-5">
-
-            {/* Header */}
-            <div className="flex items-center justify-between animate-fadeIn">
-              <div>
-                <h1 className="text-xl font-bold text-white">Dashboard</h1>
-                <p className="text-xs text-slate-500">Vos chantiers en temps réel</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {savedReports.length > 0 && (
-                  <button type="button" onClick={() => { localStorage.removeItem(HISTORY_KEY); setSavedReports([]); }} className="p-2 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-                <button type="button" onClick={() => { setStage("idle"); setDashboardChantier(null); setDashboardReportDetail(null); }} className="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
-                  <Mic className="h-3.5 w-3.5" /> Nouveau
-                </button>
-              </div>
-            </div>
-
-            {/* Empty state */}
-            {savedReports.length === 0 ? (
-              <div className="text-center py-20 animate-fadeIn">
-                <BarChart3 className="h-16 w-16 text-slate-800 mx-auto mb-5" />
-                <p className="text-base font-medium text-slate-400 mb-2">Aucun rapport</p>
-                <p className="text-sm text-slate-600 mb-8">Dictez votre premier rapport vocal pour commencer</p>
-                <button type="button" onClick={() => setStage("idle")} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors">
-                  <Mic className="h-4 w-4" /> Créer un rapport
-                </button>
-              </div>
-            ) : (
-              <>
-                {/* KPI Cards */}
-                <div className="grid grid-cols-3 gap-2.5 animate-fadeInUp stagger-1">
-                  <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-3 text-center">
-                    <p className="text-2xl font-bold text-white">{total}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Chantier{total > 1 ? "s" : ""}</p>
-                  </div>
-                  <div className="rounded-xl bg-emerald-500/8 border border-emerald-500/20 p-3 text-center">
-                    <p className="text-2xl font-bold text-emerald-400">{okCount}</p>
-                    <p className="text-[10px] text-emerald-500/70 mt-0.5">🟢 OK</p>
-                  </div>
-                  <div className={`rounded-xl p-3 text-center ${critCount > 0 ? "bg-red-500/8 border border-red-500/20" : "bg-amber-500/8 border border-amber-500/20"}`}>
-                    <p className={`text-2xl font-bold ${critCount > 0 ? "text-red-400" : "text-amber-400"}`}>{warnCount}</p>
-                    <p className={`text-[10px] mt-0.5 ${critCount > 0 ? "text-red-500/70" : "text-amber-500/70"}`}>{critCount > 0 ? "🔴" : "🟠"} À surveiller</p>
-                  </div>
-                </div>
-
-                {/* Attention banner */}
-                {needAttention.length > 0 && (
-                  <div className={`rounded-xl p-3 flex items-center gap-3 animate-fadeInUp stagger-2 ${critCount > 0 ? "bg-red-500/10 border border-red-500/25" : "bg-amber-500/10 border border-amber-500/25"}`}>
-                    <Bell className={`h-5 w-5 shrink-0 ${critCount > 0 ? "text-red-400" : "text-amber-400"}`} />
-                    <p className={`text-sm font-medium ${critCount > 0 ? "text-red-300" : "text-amber-300"}`}>
-                      {needAttention.length} chantier{needAttention.length > 1 ? "s" : ""} nécessite{needAttention.length > 1 ? "nt" : ""} votre attention
-                    </p>
-                  </div>
-                )}
-
-                {/* Alertes prioritaires */}
-                {allAlertes.length > 0 && (
-                  <div className="space-y-1.5 animate-fadeInUp stagger-3">
-                    <h2 className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <AlertTriangle className="h-3.5 w-3.5" /> Alertes prioritaires
-                    </h2>
-                    <div className="rounded-xl bg-red-500/6 border border-red-500/15 divide-y divide-red-500/10">
-                      {allAlertes.slice(0, 5).map((a, i) => (
-                        <div key={i} className="px-3 py-2.5 flex items-start gap-2.5">
-                          <span className="text-xs mt-0.5">{a.status === "red" ? "🔴" : "⚠️"}</span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs text-red-300/90">{a.text}</p>
-                            <p className="text-[10px] text-red-400/50 mt-0.5">{a.chantier}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Chantiers list */}
-                <div className="space-y-1.5 animate-fadeInUp stagger-4">
-                  <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" /> Mes chantiers
-                  </h2>
-                  <div className="space-y-2">
-                    {chantiers.map((c) => (
-                      <button
-                        type="button"
-                        key={c.name}
-                        onClick={() => setDashboardChantier(c)}
-                        className="w-full rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-left transition-all hover:border-slate-700 hover:bg-slate-800/50 active:scale-[0.98]"
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-sm font-semibold text-white truncate mr-3">{statusEmoji[c.status]} {c.name}</span>
-                          <div className="flex items-center gap-2.5 shrink-0">
-                            {c.score !== null && (
-                              <span className={`text-sm font-bold ${c.score >= 7 ? "text-emerald-400" : c.score >= 5 ? "text-amber-400" : "text-red-400"}`}>{c.score}/10</span>
-                            )}
-                            <ChevronRight className="h-4 w-4 text-slate-600" />
-                          </div>
-                        </div>
-                        {c.latestReport.report.synthese && (
-                          <p className="text-xs text-slate-400 line-clamp-2 mb-2">{c.latestReport.report.synthese}</p>
-                        )}
-                        {c.topProblems.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {c.topProblems.slice(0, 2).map((p, i) => (
-                              <span key={i} className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-400 border border-amber-500/20">⚠ {p.length > 40 ? p.slice(0, 40) + "…" : p}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3 text-[10px] text-slate-600">
-                          <span>{c.allReports.length} rapport{c.allReports.length > 1 ? "s" : ""}</span>
-                          <span>·</span>
-                          <span>{new Date(c.latestReport.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rapports récents */}
-                <div className="space-y-1.5 animate-fadeInUp stagger-5">
-                  <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" /> Rapports récents
-                  </h2>
-                  <div className="space-y-1.5">
-                    {savedReports.slice(0, 5).map((sr) => {
-                      const sl = getStatusLevel(sr.report.statut_global);
-                      return (
-                        <button
-                          type="button"
-                          key={sr.id}
-                          onClick={() => setDashboardReportDetail(sr)}
-                          className="w-full rounded-lg border border-slate-800/60 bg-slate-900/30 px-3 py-2.5 text-left transition-all hover:bg-slate-800/40 active:scale-[0.98] flex items-center gap-3"
-                        >
-                          <span className="text-sm">{statusEmoji[sl]}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-white truncate">{sr.report.lieu_chantier || "Rapport"}</p>
-                            <p className="text-[10px] text-slate-600">{new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                          </div>
-                          {sr.report.score && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
-                          <ChevronRight className="h-3.5 w-3.5 text-slate-700" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
+        <EliteDashboard
+          reports={savedReports}
+          userName={currentUser?.name}
+          onNewReport={() => { setStage("idle"); }}
+          onDeleteAll={() => { clearHistory(); setSavedReports([]); }}
+          onClose={() => setStage("idle")}
+        />
       );
     }
 
