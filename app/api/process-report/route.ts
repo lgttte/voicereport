@@ -1023,11 +1023,13 @@ export async function POST(request: NextRequest) {
   // Étape 1 : Réception du fichier audio
   let audioBlob: Blob;
   let manualContext: Record<string, string> = {};
+  let enrichment: { chantierId?: string; chantierName?: string; etatGlobal?: string; urgent?: boolean; typeJournee?: string } | null = null;
   try {
     console.log(`[AUDIO] Extraction du fichier audio`);
     const formData = await request.formData();
     const audioData = formData.get('audio');
     const manualContextRaw = formData.get('manualContext');
+    const enrichmentRaw = formData.get('enrichment');
     
     if (!audioData || !(audioData instanceof Blob)) {
       throw new Error("Aucun fichier audio reçu ou format invalide");
@@ -1040,6 +1042,12 @@ export async function POST(request: NextRequest) {
     if (typeof manualContextRaw === "string" && manualContextRaw.trim()) {
       try { manualContext = JSON.parse(manualContextRaw); } catch { /* ignore */ }
       console.log(`[CONTEXT MANUEL] Champs saisis:`, Object.keys(manualContext).join(", "));
+    }
+
+    // Parse enrichment data (from post-recording enrichment step)
+    if (typeof enrichmentRaw === "string" && enrichmentRaw.trim()) {
+      try { enrichment = JSON.parse(enrichmentRaw); } catch { /* ignore */ }
+      console.log(`[ENRICHISSEMENT] Données:`, enrichment);
     }
   } catch (audioError) {
     console.error(
@@ -1167,6 +1175,24 @@ export async function POST(request: NextRequest) {
     if (manualContext.materiel) contextParts.push(`Matériel manquant (saisi manuellement) : ${manualContext.materiel}`);
     if (contextParts.length > 0) {
       userMessage += "\n\n--- Informations saisies manuellement ---\n" + contextParts.join("\n");
+    }
+
+    // Inject enrichment context
+    if (enrichment) {
+      const enrichParts: string[] = [];
+      if (enrichment.chantierName) enrichParts.push(`Chantier : ${enrichment.chantierName}`);
+      if (enrichment.etatGlobal) {
+        const etatMap: Record<string, string> = { fluide: "Journée fluide, tout se passe bien", difficile: "Journée difficile, quelques problèmes", critique: "Situation critique, blocages majeurs" };
+        enrichParts.push(`État global signalé par l'ouvrier : ${etatMap[enrichment.etatGlobal] || enrichment.etatGlobal}`);
+      }
+      if (enrichment.urgent === true) enrichParts.push(`⚠️ L'ouvrier signale une URGENCE sur ce chantier`);
+      if (enrichment.typeJournee) {
+        const typeMap: Record<string, string> = { normal: "Journée normale", retard: "Retard constaté", blocage: "Blocage en cours", incident: "Incident signalé" };
+        enrichParts.push(`Type de journée : ${typeMap[enrichment.typeJournee] || enrichment.typeJournee}`);
+      }
+      if (enrichParts.length > 0) {
+        userMessage += "\n\n--- Contexte enrichi par l'ouvrier ---\n" + enrichParts.join("\n");
+      }
     }
 
     const anthropicResponse = await anthropic.messages.create({

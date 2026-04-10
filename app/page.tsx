@@ -31,10 +31,63 @@ import {
   BarChart3,
   WifiOff,
   Type,
+  Search,
+  HardHat,
+  CircleDot,
 } from "lucide-react";
 import Chat from "./components/Chat";
 
-type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success" | "dashboard";
+type Stage = "idle" | "recording" | "preview" | "enrich" | "processing" | "review" | "success" | "dashboard";
+
+// ── Chantier registry (persisted in localStorage) ──
+type ChantierEntry = {
+  id: string;
+  name: string;
+  lastUsed: number; // timestamp
+};
+
+const CHANTIERS_KEY = "voicereport_chantiers";
+const LAST_CHANTIER_KEY = "voicereport_last_chantier";
+
+function loadChantiers(): ChantierEntry[] {
+  try {
+    const raw = localStorage.getItem(CHANTIERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveChantiers(list: ChantierEntry[]) {
+  localStorage.setItem(CHANTIERS_KEY, JSON.stringify(list));
+}
+
+function addOrUpdateChantier(name: string): ChantierEntry {
+  const list = loadChantiers();
+  const normalized = name.trim();
+  const existing = list.find(c => c.name.toLowerCase() === normalized.toLowerCase());
+  if (existing) {
+    existing.lastUsed = Date.now();
+    saveChantiers(list);
+    localStorage.setItem(LAST_CHANTIER_KEY, existing.id);
+    return existing;
+  }
+  const entry: ChantierEntry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+    name: normalized,
+    lastUsed: Date.now(),
+  };
+  list.unshift(entry);
+  saveChantiers(list);
+  localStorage.setItem(LAST_CHANTIER_KEY, entry.id);
+  return entry;
+}
+
+type EnrichmentData = {
+  chantierId: string;
+  chantierName: string;
+  etatGlobal?: "fluide" | "difficile" | "critique";
+  urgent?: boolean;
+  typeJournee?: "normal" | "retard" | "blocage" | "incident";
+};
 
 type ReportSections = {
   statut_global: string;
@@ -249,6 +302,14 @@ export default function Home() {
   const [encourageIdx, setEncourageIdx] = useState(0);
   const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
   const [offlineBanner, setOfflineBanner] = useState(false);
+  // ── Enrichment step state ──
+  const [chantierList, setChantierList] = useState<ChantierEntry[]>([]);
+  const [enrichChantierSearch, setEnrichChantierSearch] = useState("");
+  const [enrichSelectedChantier, setEnrichSelectedChantier] = useState<string | null>(null);
+  const [enrichEtat, setEnrichEtat] = useState<"fluide" | "difficile" | "critique" | null>(null);
+  const [enrichUrgent, setEnrichUrgent] = useState<boolean | null>(null);
+  const [enrichTypeJournee, setEnrichTypeJournee] = useState<"normal" | "retard" | "blocage" | "incident" | null>(null);
+  const [enrichment, setEnrichment] = useState<EnrichmentData | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -271,6 +332,11 @@ export default function Home() {
     }
     setSavedReports(loadHistory());
     setOfflineQueue(loadOfflineQueue());
+    // Load chantier registry
+    const list = loadChantiers();
+    setChantierList(list);
+    const lastId = localStorage.getItem(LAST_CHANTIER_KEY);
+    if (lastId) setEnrichSelectedChantier(lastId);
     return () => stopTimer();
   }, [stopTimer]);
 
@@ -380,6 +446,12 @@ export default function Home() {
     setAudioDuration(0);
     setActiveHintField(null);
     setHintTexts({});
+    // Reset enrichment (but keep selected chantier for next time)
+    setEnrichEtat(null);
+    setEnrichUrgent(null);
+    setEnrichTypeJournee(null);
+    setEnrichment(null);
+    setEnrichChantierSearch("");
   };
 
   const handleButtonClick = async () => {
@@ -475,7 +547,7 @@ export default function Home() {
   };
 
   // ── Audio preview: process the recorded blob ──
-  const processAudio = async () => {
+  const processAudio = async (enrichData?: EnrichmentData) => {
     if (!audioBlobRef.current) return;
     setStage("processing");
     setIsPlaying(false);
@@ -499,6 +571,11 @@ export default function Home() {
       formData.append("manualContext", JSON.stringify(manualContext));
     }
 
+    // Append enrichment data from post-recording step
+    if (enrichData) {
+      formData.append("enrichment", JSON.stringify(enrichData));
+    }
+
     try {
       const response = await fetch("/api/process-report", {
         method: "POST",
@@ -514,8 +591,14 @@ export default function Home() {
       if (result.error) throw new Error(result.error);
       if (!result.report) throw new Error("Aucune donnée de rapport reçue.");
 
-      setReport(result.report);
-      setReportText(buildReportText(result.report));
+      // Inject enrichment data into report if not already set by AI
+      const enrichedReport = { ...result.report } as ReportSections;
+      if (enrichData?.chantierName && !enrichedReport.lieu_chantier) {
+        enrichedReport.lieu_chantier = enrichData.chantierName;
+      }
+
+      setReport(enrichedReport);
+      setReportText(buildReportText(enrichedReport));
       setStage("review");
     } catch (error) {
       console.error("Erreur traitement :", error);
@@ -1051,11 +1134,15 @@ export default function Home() {
             <div className="mt-10 flex flex-col items-center gap-4 w-full animate-fadeInUp stagger-3">
               <button
                 type="button"
-                onClick={processAudio}
+                onClick={() => {
+                  setIsPlaying(false);
+                  if (audioRef.current) audioRef.current.pause();
+                  setStage("enrich");
+                }}
                 className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-sm font-semibold text-black transition-all duration-200 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Sparkles className="h-4 w-4" />
-                Générer le rapport
+                Continuer
               </button>
               <button
                 type="button"
@@ -1066,6 +1153,243 @@ export default function Home() {
                 Recommencer
               </button>
             </div>
+          </div>
+        </main>
+      );
+    }
+
+    // ── Enrichment screen — chantier selection + quick options ──
+    if (stage === "enrich") {
+      const searchLower = enrichChantierSearch.toLowerCase();
+      const filteredChantiers = enrichChantierSearch
+        ? chantierList.filter(c => c.name.toLowerCase().includes(searchLower))
+        : chantierList.sort((a, b) => b.lastUsed - a.lastUsed).slice(0, 8);
+      const selectedChantierObj = chantierList.find(c => c.id === enrichSelectedChantier);
+      const isNewChantier = enrichChantierSearch.trim() && !filteredChantiers.some(c => c.name.toLowerCase() === searchLower);
+      const canProceed = !!enrichSelectedChantier || (!!enrichChantierSearch.trim());
+
+      const handleEnrichSubmit = () => {
+        let chantierId: string;
+        let chantierName: string;
+        if (enrichSelectedChantier && selectedChantierObj) {
+          chantierId = selectedChantierObj.id;
+          chantierName = selectedChantierObj.name;
+          addOrUpdateChantier(chantierName);
+        } else if (enrichChantierSearch.trim()) {
+          const entry = addOrUpdateChantier(enrichChantierSearch.trim());
+          chantierId = entry.id;
+          chantierName = entry.name;
+          setEnrichSelectedChantier(entry.id);
+        } else {
+          return;
+        }
+        setChantierList(loadChantiers());
+        const data: EnrichmentData = {
+          chantierId,
+          chantierName,
+          etatGlobal: enrichEtat ?? undefined,
+          urgent: enrichUrgent ?? undefined,
+          typeJournee: enrichTypeJournee ?? undefined,
+        };
+        setEnrichment(data);
+        processAudio(data);
+      };
+
+      return (
+        <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center overflow-hidden px-5 py-8">
+          <div className="relative z-10 w-full max-w-md space-y-5">
+
+            {/* Header */}
+            <div className="text-center animate-fadeIn">
+              <HardHat className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+              <h1 className="text-lg font-bold text-white mb-1">Compléter le rapport</h1>
+              <p className="text-sm text-slate-400">Sélectionnez le chantier en 1 clic</p>
+            </div>
+
+            {/* ── Chantier selection (required) ── */}
+            <div className="animate-fadeInUp stagger-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">
+                À quel chantier correspond ce rapport ? *
+              </label>
+              {/* Search input */}
+              <div className="relative mb-2">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={selectedChantierObj ? selectedChantierObj.name : enrichChantierSearch}
+                  onChange={(e) => {
+                    setEnrichChantierSearch(e.target.value);
+                    setEnrichSelectedChantier(null);
+                  }}
+                  onFocus={() => {
+                    if (selectedChantierObj) {
+                      setEnrichChantierSearch(selectedChantierObj.name);
+                      setEnrichSelectedChantier(null);
+                    }
+                  }}
+                  placeholder="Rechercher ou créer un chantier..."
+                  className="w-full rounded-xl border border-slate-700/60 bg-slate-900/80 py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 transition-all"
+                />
+              </div>
+
+              {/* Chantier list — quick tap */}
+              {!selectedChantierObj && (
+                <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                  {filteredChantiers.map((c) => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onClick={() => { setEnrichSelectedChantier(c.id); setEnrichChantierSearch(""); }}
+                      className="w-full flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-all hover:border-slate-600 hover:bg-slate-800/60 active:scale-[0.98]"
+                    >
+                      <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
+                      <span className="text-sm text-white truncate">{c.name}</span>
+                    </button>
+                  ))}
+
+                  {/* Create new chantier */}
+                  {isNewChantier && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const entry = addOrUpdateChantier(enrichChantierSearch.trim());
+                        setEnrichSelectedChantier(entry.id);
+                        setChantierList(loadChantiers());
+                        setEnrichChantierSearch("");
+                      }}
+                      className="w-full flex items-center gap-3 rounded-xl border border-dashed border-sky-500/40 bg-sky-500/5 px-4 py-3 text-left transition-all hover:border-sky-400 hover:bg-sky-500/10 active:scale-[0.98]"
+                    >
+                      <Plus className="h-4 w-4 text-sky-400 shrink-0" />
+                      <span className="text-sm text-sky-300">Créer &laquo;&nbsp;{enrichChantierSearch.trim()}&nbsp;&raquo;</span>
+                    </button>
+                  )}
+
+                  {filteredChantiers.length === 0 && !isNewChantier && !enrichChantierSearch && (
+                    <p className="text-sm text-slate-600 text-center py-4">
+                      Tapez le nom du chantier
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Selected chantier badge */}
+              {selectedChantierObj && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5">
+                  <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
+                  <span className="text-sm font-medium text-sky-300 flex-1 truncate">{selectedChantierObj.name}</span>
+                  <button type="button" onClick={() => { setEnrichSelectedChantier(null); setEnrichChantierSearch(""); }} className="text-slate-400 hover:text-white">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── État global (optional) ── */}
+            <div className="animate-fadeInUp stagger-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Comment s&apos;est passée la journée ?
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "fluide" as const,    emoji: "🟢", label: "Fluide" },
+                  { key: "difficile" as const, emoji: "🟠", label: "Difficultés" },
+                  { key: "critique" as const,  emoji: "🔴", label: "Critique" },
+                ]).map(({ key, emoji, label }) => (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setEnrichEtat(enrichEtat === key ? null : key)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all active:scale-[0.95] ${
+                      enrichEtat === key
+                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
+                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-xl">{emoji}</span>
+                    <span className={`text-xs font-medium ${enrichEtat === key ? "text-white" : "text-slate-400"}`}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Urgence (optional) ── */}
+            <div className="animate-fadeInUp stagger-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Quelque chose d&apos;urgent ?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { val: true,  emoji: "🚨", label: "Oui, urgent" },
+                  { val: false, emoji: "👌", label: "Non" },
+                ]).map(({ val, emoji, label }) => (
+                  <button
+                    type="button"
+                    key={String(val)}
+                    onClick={() => setEnrichUrgent(enrichUrgent === val ? null : val)}
+                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all active:scale-[0.95] ${
+                      enrichUrgent === val
+                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
+                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-lg">{emoji}</span>
+                    <span className={`text-sm font-medium ${enrichUrgent === val ? "text-white" : "text-slate-400"}`}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Type de journée (optional) ── */}
+            <div className="animate-fadeInUp stagger-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Type de journée
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: "normal" as const,   emoji: "✅", label: "Normal" },
+                  { key: "retard" as const,   emoji: "⏳", label: "Retard" },
+                  { key: "blocage" as const,  emoji: "🛑", label: "Blocage" },
+                  { key: "incident" as const, emoji: "⚠️",  label: "Incident" },
+                ]).map(({ key, emoji, label }) => (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setEnrichTypeJournee(enrichTypeJournee === key ? null : key)}
+                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all active:scale-[0.95] ${
+                      enrichTypeJournee === key
+                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
+                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
+                    }`}
+                  >
+                    <span className="text-lg">{emoji}</span>
+                    <span className={`text-sm font-medium ${enrichTypeJournee === key ? "text-white" : "text-slate-400"}`}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Generate button ── */}
+            <div className="pt-2 space-y-3 animate-fadeInUp stagger-5">
+              <button
+                type="button"
+                onClick={handleEnrichSubmit}
+                disabled={!canProceed}
+                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-4 text-base font-semibold text-black transition-all duration-200 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="h-4.5 w-4.5" />
+                Générer le rapport
+              </button>
+              <button
+                type="button"
+                onClick={() => setStage("preview")}
+                className="flex w-full items-center justify-center gap-2 text-sm font-light text-slate-400 transition hover:text-white"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Retour
+              </button>
+            </div>
+
           </div>
         </main>
       );
