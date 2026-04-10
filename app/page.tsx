@@ -29,6 +29,8 @@ import {
   ChevronRight,
   Trash2,
   BarChart3,
+  WifiOff,
+  Type,
 } from "lucide-react";
 import Chat from "./components/Chat";
 
@@ -73,6 +75,51 @@ type SavedReport = {
 
 const HISTORY_KEY = "voicereport_history";
 const MAX_HISTORY = 50;
+const OFFLINE_QUEUE_KEY = "voicereport_offline_queue";
+
+const ENCOURAGEMENT_PHRASES = [
+  "Parlez naturellement, comme \u00e0 votre patron",
+  "Votre patron recevra le rapport en 10 secondes",
+  "Plus de 500 rapports envoy\u00e9s cette semaine",
+  "Utilis\u00e9 sur 47 chantiers en France",
+  "30 secondes pour un rapport complet",
+];
+
+type OfflineQueueItem = {
+  id: string;
+  timestamp: number;
+  report: ReportSections;
+  recipientEmail: string;
+  photoLegends: string[];
+  // photos stored as base64 since File can't be serialized
+  photosBase64: { name: string; type: string; data: string }[];
+};
+
+function loadOfflineQueue(): OfflineQueueItem[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveOfflineQueue(queue: OfflineQueueItem[]) {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  const buf = await file.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function base64ToBlob(b64: string, type: string): Blob {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
 
 function loadHistory(): SavedReport[] {
   try {
@@ -197,6 +244,11 @@ export default function Home() {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
   const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
+  const [activeHintField, setActiveHintField] = useState<string | null>(null);
+  const [hintTexts, setHintTexts] = useState<Record<string, string>>({});
+  const [encourageIdx, setEncourageIdx] = useState(0);
+  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
+  const [offlineBanner, setOfflineBanner] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -218,8 +270,61 @@ export default function Home() {
       setRecipientEmail(storedEmail);
     }
     setSavedReports(loadHistory());
+    setOfflineQueue(loadOfflineQueue());
     return () => stopTimer();
   }, [stopTimer]);
+
+  // ── Encouragement phrase rotation ──
+  useEffect(() => {
+    if (stage !== "idle") return;
+    const interval = setInterval(() => {
+      setEncourageIdx((prev) => (prev + 1) % ENCOURAGEMENT_PHRASES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [stage]);
+
+  // ── Offline queue: send pending reports when back online ──
+  useEffect(() => {
+    const processQueue = async () => {
+      const queue = loadOfflineQueue();
+      if (queue.length === 0) return;
+      const remaining: OfflineQueueItem[] = [];
+      for (const item of queue) {
+        try {
+          const formData = new FormData();
+          formData.append("report", JSON.stringify(item.report));
+          formData.append("recipientEmail", item.recipientEmail);
+          formData.append("photoLegends", JSON.stringify(item.photoLegends));
+          for (const photo of item.photosBase64) {
+            const blob = base64ToBlob(photo.data, photo.type);
+            formData.append("photos", new File([blob], photo.name, { type: photo.type }));
+          }
+          const res = await fetch("/api/send-email", { method: "POST", body: formData });
+          if (res.ok) {
+            saveToHistory(item.report, item.recipientEmail);
+          } else {
+            remaining.push(item);
+          }
+        } catch {
+          remaining.push(item);
+        }
+      }
+      saveOfflineQueue(remaining);
+      setOfflineQueue(remaining);
+      if (remaining.length < queue.length) {
+        setSavedReports(loadHistory());
+      }
+    };
+
+    const handleOnline = () => {
+      setOfflineBanner(false);
+      processQueue();
+    };
+    window.addEventListener("online", handleOnline);
+    // Try processing on mount if online
+    if (navigator.onLine) processQueue();
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -273,6 +378,8 @@ export default function Home() {
     setIsPlaying(false);
     setPlaybackTime(0);
     setAudioDuration(0);
+    setActiveHintField(null);
+    setHintTexts({});
   };
 
   const handleButtonClick = async () => {
@@ -382,6 +489,16 @@ export default function Home() {
     } else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
     formData.append("audio", audioBlobRef.current, fileName);
 
+    // Append manual text context from hint fields if filled
+    const manualContext: Record<string, string> = {};
+    if (hintTexts.lieu?.trim()) manualContext.lieu = hintTexts.lieu.trim();
+    if (hintTexts.travaux?.trim()) manualContext.travaux = hintTexts.travaux.trim();
+    if (hintTexts.problemes?.trim()) manualContext.problemes = hintTexts.problemes.trim();
+    if (hintTexts.materiel?.trim()) manualContext.materiel = hintTexts.materiel.trim();
+    if (Object.keys(manualContext).length > 0) {
+      formData.append("manualContext", JSON.stringify(manualContext));
+    }
+
     try {
       const response = await fetch("/api/process-report", {
         method: "POST",
@@ -430,6 +547,44 @@ export default function Home() {
 
     setIsSending(true);
     setMessage(null);
+
+    // ── Offline: queue locally if no network ──
+    if (!navigator.onLine) {
+      try {
+        const photosBase64: { name: string; type: string; data: string }[] = [];
+        for (const photo of photoPreviews) {
+          photosBase64.push({
+            name: photo.file.name,
+            type: photo.file.type,
+            data: await fileToBase64(photo.file),
+          });
+        }
+        const item: OfflineQueueItem = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          timestamp: Date.now(),
+          report,
+          recipientEmail,
+          photoLegends,
+          photosBase64,
+        };
+        const queue = loadOfflineQueue();
+        queue.push(item);
+        saveOfflineQueue(queue);
+        setOfflineQueue(queue);
+        setOfflineBanner(true);
+        saveToHistory(report, recipientEmail);
+        setSavedReports(loadHistory());
+        localStorage.setItem("lastRecipientEmail", recipientEmail);
+        setMessage("Rapport sauvegardé ! Il sera envoyé automatiquement dès le retour du réseau.");
+        setStage("success");
+      } catch (err) {
+        console.error("[OFFLINE] Erreur sauvegarde :", err);
+        setMessage("Impossible de sauvegarder le rapport hors-ligne.");
+      } finally {
+        setIsSending(false);
+      }
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -520,13 +675,24 @@ export default function Home() {
 
           <div className="relative z-10 flex flex-col items-center w-full max-w-sm text-center">
             <CheckCircle className="h-24 w-24 text-emerald-400 animate-scaleIn mb-8" />
-            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">Rapport envoyé&nbsp;!</h1>
-            <p className="text-base text-slate-400 mb-10 leading-relaxed animate-fadeInUp stagger-3">
-              Transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span>
+            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">
+              {offlineBanner ? "Rapport sauvegardé !" : "Rapport envoyé\u00a0!"}
+            </h1>
+            <p className="text-base text-slate-400 mb-6 leading-relaxed animate-fadeInUp stagger-3">
+              {offlineBanner
+                ? "Il sera envoyé automatiquement au retour du réseau."
+                : <>Transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span></>
+              }
             </p>
+            {offlineBanner && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 mb-6 animate-fadeInUp stagger-3">
+                <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
+              </div>
+            )}
             <button
               type="button"
-              onClick={resetFlow}
+              onClick={() => { setOfflineBanner(false); resetFlow(); }}
               className="flex items-center gap-2.5 rounded-xl bg-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] animate-fadeInUp stagger-4"
             >
               <Mic className="h-4 w-4" />
@@ -1008,33 +1174,68 @@ export default function Home() {
             <Mic className="h-12 w-12" />
           </button>
 
-          {/* Reassurance */}
-          <p className="text-sm font-light text-slate-400 mt-6 animate-fadeIn stagger-3">
-            Parlez naturellement, comme à votre patron
+          {/* Reassurance — rotating phrases */}
+          <p className="text-sm font-light text-slate-400 mt-6 animate-fadeIn stagger-3 transition-opacity duration-500" key={encourageIdx}>
+            {ENCOURAGEMENT_PHRASES[encourageIdx]}
           </p>
 
-          {/* Hint chips — compact 2×2 grid */}
+          {/* Hint chips — clickable → open text field */}
           <div className="mt-10 grid grid-cols-2 gap-2 w-full">
             {([
-              { icon: MapPin,        label: "Lieu",       hint: "Chantier, ville" },
-              { icon: Hammer,        label: "Travaux",    hint: "Ce qui a été fait" },
-              { icon: AlertTriangle, label: "Problèmes",  hint: "Retards, pannes" },
-              { icon: Package,       label: "Matériel",   hint: "Ce qui manque" },
-            ] as { icon: React.ElementType; label: string; hint: string }[]).map(
-              ({ icon: Icon, label, hint }, idx) => (
-                <div
-                  key={label}
-                  className={`flex items-center gap-2.5 rounded-xl bg-slate-800/40 p-3 animate-fadeInUp stagger-${idx + 4}`}
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-slate-500" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-white">{label}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{hint}</p>
-                  </div>
+              { icon: MapPin,        label: "Lieu",       hint: "Chantier, ville",   fieldKey: "lieu" },
+              { icon: Hammer,        label: "Travaux",    hint: "Ce qui a été fait",  fieldKey: "travaux" },
+              { icon: AlertTriangle, label: "Problèmes",  hint: "Retards, pannes",   fieldKey: "problemes" },
+              { icon: Package,       label: "Matériel",   hint: "Ce qui manque",     fieldKey: "materiel" },
+            ] as { icon: React.ElementType; label: string; hint: string; fieldKey: string }[]).map(
+              ({ icon: Icon, label, hint, fieldKey }, idx) => (
+                <div key={label} className={`animate-fadeInUp stagger-${idx + 4}`}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveHintField(activeHintField === fieldKey ? null : fieldKey)}
+                    className={`flex items-center gap-2.5 rounded-xl w-full p-3 transition-all duration-200 ${
+                      activeHintField === fieldKey
+                        ? "bg-slate-700/60 border border-slate-600"
+                        : "bg-slate-800/40 border border-transparent hover:bg-slate-800/60"
+                    }`}
+                  >
+                    <Icon className={`h-4 w-4 shrink-0 ${activeHintField === fieldKey ? "text-sky-400" : "text-slate-500"}`} />
+                    <div className="min-w-0 text-left flex-1">
+                      <p className="text-xs font-medium text-white">{label}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{hint}</p>
+                    </div>
+                    <Type className={`h-3 w-3 shrink-0 ${activeHintField === fieldKey ? "text-sky-400" : "text-slate-600"}`} />
+                  </button>
+                  {activeHintField === fieldKey && (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={hintTexts[fieldKey] || ""}
+                      onChange={(e) => setHintTexts((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                      placeholder={`Saisir ${label.toLowerCase()}...`}
+                      className="mt-1.5 w-full rounded-lg border border-slate-700/60 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 animate-fadeIn"
+                    />
+                  )}
                 </div>
               )
             )}
           </div>
+
+          {/* Offline queue banner */}
+          {offlineQueue.length > 0 && (
+            <div className="mt-6 flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 w-full animate-fadeIn">
+              <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-300 flex-1">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
+              {navigator.onLine && (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new Event("online"))}
+                  className="text-[10px] text-amber-400 font-semibold hover:text-amber-300"
+                >
+                  Réessayer
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Dashboard button */}
           {savedReports.length > 0 && (

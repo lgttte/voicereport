@@ -1022,10 +1022,12 @@ export async function POST(request: NextRequest) {
 
   // Étape 1 : Réception du fichier audio
   let audioBlob: Blob;
+  let manualContext: Record<string, string> = {};
   try {
     console.log(`[AUDIO] Extraction du fichier audio`);
     const formData = await request.formData();
     const audioData = formData.get('audio');
+    const manualContextRaw = formData.get('manualContext');
     
     if (!audioData || !(audioData instanceof Blob)) {
       throw new Error("Aucun fichier audio reçu ou format invalide");
@@ -1033,6 +1035,12 @@ export async function POST(request: NextRequest) {
     
     audioBlob = audioData;
     console.log(`[AUDIO] ✅ Fichier reçu - Taille: ${(audioBlob.size / 1024 / 1024).toFixed(2)}MB, Type: ${audioBlob.type}`);
+    
+    // Parse manual text context (from typed hint fields)
+    if (typeof manualContextRaw === "string" && manualContextRaw.trim()) {
+      try { manualContext = JSON.parse(manualContextRaw); } catch { /* ignore */ }
+      console.log(`[CONTEXT MANUEL] Champs saisis:`, Object.keys(manualContext).join(", "));
+    }
   } catch (audioError) {
     console.error(
       `[AUDIO ERREUR]`,
@@ -1150,13 +1158,24 @@ export async function POST(request: NextRequest) {
       `\n\nEXEMPLE 2 — "Il manque du ciment et la bétonnière est en panne, faut appeler le réparateur" :` +
       `\n{"statut_global":"Situation critique","synthese":"Bétonnière en panne et manque ciment, risque blocage","score":3,"alertes":["🔴 Bétonnière HS — appeler technicien en urgence","⚠️ Commander du ciment avant demain matin"],"impacts":["🔴 Arrêt des travaux de bétonnage","⚠️ Risque de blocage chantier demain"],"travaux_realises":[],"problemes_rencontres":["[Critique] Bétonnière en panne"],"materiel_manquant":["Ciment"],"a_prevoir":["Commander du ciment","Appeler réparateur bétonnière"],"suggestion_legende_photo":"Bétonnière en panne sur chantier"}`;
 
+    // Build user message: transcription + optional manual context
+    let userMessage = transcription;
+    const contextParts: string[] = [];
+    if (manualContext.lieu) contextParts.push(`Lieu du chantier : ${manualContext.lieu}`);
+    if (manualContext.travaux) contextParts.push(`Travaux réalisés (saisi manuellement) : ${manualContext.travaux}`);
+    if (manualContext.problemes) contextParts.push(`Problèmes (saisi manuellement) : ${manualContext.problemes}`);
+    if (manualContext.materiel) contextParts.push(`Matériel manquant (saisi manuellement) : ${manualContext.materiel}`);
+    if (contextParts.length > 0) {
+      userMessage += "\n\n--- Informations saisies manuellement ---\n" + contextParts.join("\n");
+    }
+
     const anthropicResponse = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       system: systemInstructions,
       messages: [
         {
           role: "user",
-          content: transcription,
+          content: userMessage,
         },
       ],
       max_tokens: 1500,
