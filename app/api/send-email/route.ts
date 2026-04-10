@@ -169,6 +169,27 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const BLUE_BG:   [number, number, number] = [235, 245, 251];
 
   let pageNum = 0;
+  let compact = false; // set to true when content overflows a single page
+  const PAGE_BOTTOM = PH - 18; // usable bottom limit (above footer)
+  const START_Y = logoDataUrl ? 42 : 34; // y position after header
+
+  // ── Height estimation helper ─────────────────────────────────────────
+  function estimateSectionH(sectionItems: string[], isCompact: boolean): number {
+    const LH  = isCompact ? 3.8 : 5;
+    const P   = isCompact ? 3 : 5;
+    const IP  = isCompact ? 1.5 : 3;
+    const TH  = isCompact ? 7 : 9;
+    const GAP = isCompact ? 3 : 7;
+    const FS  = isCompact ? 7.5 : 9;
+    doc.setFontSize(FS);
+    let totalLines = 0;
+    for (const item of sectionItems) {
+      totalLines += (doc.splitTextToSize(item, CW - P * 2 - 6) as string[]).length;
+    }
+    if (sectionItems.length === 0) totalLines = 1;
+    const bodyH = Math.max(isCompact ? 8 : 12, totalLines * LH + P * 2 + sectionItems.length * IP);
+    return TH + bodyH + GAP;
+  }
 
   // ── Page chrome — header band + footer line ──────────────────────────
   function drawPageChrome() {
@@ -252,7 +273,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
     if (columns.length === 0) return y;
 
-    const BAR_H = 20;
+    const BAR_H = compact ? 16 : 20;
     const COL   = CW / columns.length;
 
     doc.setFillColor(...LGRAY);
@@ -264,30 +285,30 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     // Column dividers
     for (let i = 1; i < columns.length; i++) {
       doc.setDrawColor(...BGRAY);
-      doc.line(ML + i * COL, y + 4, ML + i * COL, y + BAR_H - 4);
+      doc.line(ML + i * COL, y + 3, ML + i * COL, y + BAR_H - 3);
     }
 
     for (let i = 0; i < columns.length; i++) {
       const cx = ML + i * COL + COL / 2;
-      doc.setFontSize(6.5);
+      doc.setFontSize(compact ? 5.5 : 6.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...MGRAY);
-      doc.text(columns[i].label, cx, y + 8, { align: "center" });
+      doc.text(columns[i].label, cx, y + (compact ? 6.5 : 8), { align: "center" });
 
-      doc.setFontSize(8.5);
+      doc.setFontSize(compact ? 7.5 : 8.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...DGRAY);
       const valLines = doc.splitTextToSize(columns[i].value, COL - 6);
-      doc.text(valLines.slice(0, 1), cx, y + 15.5, { align: "center" });
+      doc.text(valLines.slice(0, 1), cx, y + (compact ? 12.5 : 15.5), { align: "center" });
     }
 
-    return y + BAR_H + 6;
+    return y + BAR_H + (compact ? 4 : 6);
   }
 
   // ── Statut global colored bar ─────────────────────────────────────────
   function drawStatutBar(statut: string, y: number): number {
     if (!statut) return y;
-    const BAR_H = 14;
+    const BAR_H = compact ? 10 : 14;
 
     const s = statut.toLowerCase();
     let barColor: [number, number, number];
@@ -306,18 +327,18 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
     // Strip emojis using the shared sanitizer
     const cleanText = sanitizeEmoji(statut);
-    doc.setFontSize(11);
+    doc.setFontSize(compact ? 9 : 11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...WHITE);
     doc.text(cleanText || "Statut non d\u00e9fini", PW / 2, y + BAR_H / 2 + 1, { align: "center" });
 
-    return y + BAR_H + 6;
+    return y + BAR_H + (compact ? 4 : 6);
   }
 
   // ── KPI badges row (only show badges with data, centered) ──────────
   function drawKpiBadges(travauxN: number, problemesN: number, materielN: number, photosN: number, y: number): number {
-    const BADGE_H = 18;
-    const GAP  = 4;
+    const BADGE_H = compact ? 14 : 18;
+    const GAP  = compact ? 3 : 4;
 
     // Only include badges that have meaningful data
     const allBadges: { label: string; value: string; color: [number, number, number]; bg: [number, number, number] }[] = [];
@@ -347,34 +368,38 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       doc.rect(bx + 1.5, y, 1.5, BADGE_H, "F");
 
       // Value (large)
-      doc.setFontSize(14);
+      doc.setFontSize(compact ? 11 : 14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...b.color);
-      doc.text(b.value, bx + BW / 2 + 2, y + 9, { align: "center" });
+      doc.text(b.value, bx + BW / 2 + 2, y + (compact ? 7 : 9), { align: "center" });
 
       // Label (small)
-      doc.setFontSize(6);
+      doc.setFontSize(compact ? 5 : 6);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...MGRAY);
-      doc.text(b.label, bx + BW / 2 + 2, y + 15, { align: "center" });
+      doc.text(b.label, bx + BW / 2 + 2, y + (compact ? 12 : 15), { align: "center" });
     }
 
-    return y + BADGE_H + 6;
+    return y + BADGE_H + (compact ? 4 : 6);
   }
 
   // ── Section block: title bar + color-coded bullet list ───────────────
+  // Supports compact mode and proper page-break splitting within sections
   function drawSection(title: string, items: string[], y: number, sectionType?: "travaux" | "problemes" | "materiel" | "aprevoir"): number {
-    const TITLE_H = 9;
-    const PAD     = 5;
-    const LINE_H  = 5;
-    const BULLET_INDENT = 6;
-    const ITEM_PAD = 3;
+    const TITLE_H       = compact ? 7 : 9;
+    const PAD           = compact ? 3 : 5;
+    const LINE_H        = compact ? 3.8 : 5;
+    const BULLET_INDENT = compact ? 5 : 6;
+    const ITEM_PAD      = compact ? 1.5 : 3;
+    const FONT_SIZE     = compact ? 7.5 : 9;
+    const TITLE_FONT    = compact ? 7 : 8.5;
+    const SECTION_GAP   = compact ? 3 : 7;
+    const BULLET_FS     = compact ? 4 : 5;
 
     // Pre-calculate item lines + detect severity
-    doc.setFontSize(9);
+    doc.setFontSize(FONT_SIZE);
     type ItemInfo = { lines: string[]; severity: "ok" | "warning" | "danger" | "neutral" };
     const itemInfos: ItemInfo[] = [];
-    let totalBodyLines = 0;
 
     for (const item of items) {
       const lines = doc.splitTextToSize(item, CW - PAD * 2 - BULLET_INDENT) as string[];
@@ -387,117 +412,179 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       else if (sectionType === "materiel") severity = "warning";
 
       itemInfos.push({ lines, severity });
-      totalBodyLines += lines.length;
-    }
-    if (items.length === 0) totalBodyLines = 1;
-
-    const bodyH  = Math.max(12, totalBodyLines * LINE_H + PAD * 2 + items.length * ITEM_PAD);
-    const totalH = TITLE_H + bodyH + 7;
-
-    // Overflow to next page
-    if (y + totalH > PH - 18) {
-      doc.addPage();
-      drawPageChrome();
-      y = logoDataUrl ? 42 : 34;
     }
 
-    // Title bar — navy + orange left accent
-    doc.setFillColor(...NAVY);
-    doc.roundedRect(ML, y, CW, TITLE_H, 1.5, 1.5, "F");
-    doc.setFillColor(...ORANGE);
-    doc.rect(ML, y, 4, TITLE_H, "F");
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text(title, ML + 9, y + 6.2);
-
-    // Item count badge on title bar
-    if (items.length > 0) {
-      const countStr = String(items.length);
-      doc.setFontSize(7);
-      const cBw = doc.getTextWidth(countStr) + 5;
-      const cBx = PW - MR - cBw - 3;
+    // ── Helper: draw section title bar ──
+    function drawSectionTitle(atY: number, continuation = false): number {
+      const label = continuation ? title + " (suite)" : title;
+      doc.setFillColor(...NAVY);
+      doc.roundedRect(ML, atY, CW, TITLE_H, 1.5, 1.5, "F");
       doc.setFillColor(...ORANGE);
-      doc.roundedRect(cBx, y + 2, cBw, 5.5, 1.5, 1.5, "F");
-      doc.setFontSize(7);
+      doc.rect(ML, atY, 4, TITLE_H, "F");
+      doc.setFontSize(TITLE_FONT);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...WHITE);
-      doc.text(countStr, cBx + cBw / 2, y + 6, { align: "center" });
+      doc.text(label, ML + 9, atY + TITLE_H * 0.69);
+
+      // Item count badge
+      if (items.length > 0) {
+        const countStr = String(items.length);
+        doc.setFontSize(compact ? 6 : 7);
+        const cBw = doc.getTextWidth(countStr) + 5;
+        const cBx = PW - MR - cBw - 3;
+        doc.setFillColor(...ORANGE);
+        doc.roundedRect(cBx, atY + (TITLE_H - 5.5) / 2, cBw, 5.5, 1.5, 1.5, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...WHITE);
+        doc.text(countStr, cBx + cBw / 2, atY + TITLE_H / 2 + 1, { align: "center" });
+      }
+      return atY + TITLE_H;
     }
 
-    y += TITLE_H;
+    // ── Helper: draw a single item at ty ──
+    function drawItem(info: ItemInfo, ty: number): number {
+      const rowH = info.lines.length * LINE_H + ITEM_PAD;
 
-    // Body — light gray fill + subtle border (sharp top, rounded bottom)
-    doc.setFillColor(...LGRAY);
-    doc.rect(ML, y, CW, bodyH, "F");
-    doc.setDrawColor(...BGRAY);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, bodyH, 1, 1, "S");
+      // Color-coded row background
+      if (info.severity === "danger") {
+        doc.setFillColor(...RED_BG);
+        doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
+      } else if (info.severity === "warning") {
+        doc.setFillColor(...YELLOW_BG);
+        doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
+      }
 
-    doc.setFontSize(9);
-    let ty = y + PAD + LINE_H - 1;
+      // Colored indicator circle
+      let bulletColor: [number, number, number];
+      let bulletIcon = "";
+      switch (info.severity) {
+        case "danger":  bulletColor = RED;    bulletIcon = "!"; break;
+        case "warning": bulletColor = YELLOW; bulletIcon = "!"; break;
+        case "ok":      bulletColor = GREEN;  bulletIcon = ""; break;
+        default:        bulletColor = ORANGE; bulletIcon = "";
+      }
+      doc.setFillColor(...bulletColor);
+      doc.circle(ML + PAD + 1.5, ty - 1.2, 1.2, "F");
 
+      if (bulletIcon) {
+        doc.setFontSize(BULLET_FS);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...WHITE);
+        doc.text(bulletIcon, ML + PAD + 1.5, ty - 0.5, { align: "center" });
+      }
+
+      // Item text
+      doc.setFontSize(FONT_SIZE);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...DGRAY);
+      let lineY = ty;
+      for (const line of info.lines) {
+        doc.text(line, ML + PAD + BULLET_INDENT, lineY);
+        lineY += LINE_H;
+      }
+      return lineY + ITEM_PAD;
+    }
+
+    // ── Empty section (fast path) ──
     if (items.length === 0) {
+      const emptyBodyH = compact ? 8 : 12;
+      const totalH = TITLE_H + emptyBodyH + SECTION_GAP;
+      if (y + totalH > PAGE_BOTTOM) {
+        doc.addPage(); drawPageChrome(); y = START_Y;
+      }
+      y = drawSectionTitle(y);
+      doc.setFillColor(...LGRAY);
+      doc.rect(ML, y, CW, emptyBodyH, "F");
+      doc.setDrawColor(...BGRAY);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, CW, emptyBodyH, 1, 1, "S");
+      doc.setFontSize(FONT_SIZE);
       doc.setFont("helvetica", "italic");
       doc.setTextColor(...MGRAY);
-      doc.text("Rien \u00e0 signaler", ML + PAD, ty);
-    } else {
-      for (let i = 0; i < itemInfos.length; i++) {
-        const info = itemInfos[i];
-        const rowH = info.lines.length * LINE_H + ITEM_PAD;
-
-        // Color-coded row background for warning/danger items
-        if (info.severity === "danger") {
-          doc.setFillColor(...RED_BG);
-          doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
-        } else if (info.severity === "warning") {
-          doc.setFillColor(...YELLOW_BG);
-          doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
-        }
-
-        // Colored indicator circle
-        let bulletColor: [number, number, number];
-        let bulletIcon = "";
-        switch (info.severity) {
-          case "danger":  bulletColor = RED;    bulletIcon = "!"; break;
-          case "warning": bulletColor = YELLOW; bulletIcon = "!"; break;
-          case "ok":      bulletColor = GREEN;  bulletIcon = ""; break;
-          default:        bulletColor = ORANGE; bulletIcon = "";
-        }
-        doc.setFillColor(...bulletColor);
-        doc.circle(ML + PAD + 1.5, ty - 1.2, 1.2, "F");
-
-        // Icon inside indicator for warning/danger
-        if (bulletIcon) {
-          doc.setFontSize(5);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(...WHITE);
-          doc.text(bulletIcon, ML + PAD + 1.5, ty - 0.5, { align: "center" });
-        }
-
-        // Item text
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...DGRAY);
-        for (const line of info.lines) {
-          doc.text(line, ML + PAD + BULLET_INDENT, ty);
-          ty += LINE_H;
-        }
-        ty += ITEM_PAD;
-      }
+      doc.text("Rien \u00e0 signaler", ML + PAD, y + PAD + LINE_H - 1);
+      return y + emptyBodyH + SECTION_GAP;
     }
 
-    return y + bodyH + 7;
+    // ── Calculate total height to check if single-page draw works ──
+    let totalBodyLines = 0;
+    for (const info of itemInfos) totalBodyLines += info.lines.length;
+    const fullBodyH = Math.max(compact ? 8 : 12, totalBodyLines * LINE_H + PAD * 2 + items.length * ITEM_PAD);
+    const fullTotalH = TITLE_H + fullBodyH + SECTION_GAP;
+
+    // ── Fast path: entire section fits on current page ──
+    if (y + fullTotalH <= PAGE_BOTTOM) {
+      y = drawSectionTitle(y);
+      // Body background
+      doc.setFillColor(...LGRAY);
+      doc.rect(ML, y, CW, fullBodyH, "F");
+      doc.setDrawColor(...BGRAY);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, y, CW, fullBodyH, 1, 1, "S");
+      // Draw items
+      let ty = y + PAD + LINE_H - 1;
+      for (const info of itemInfos) {
+        ty = drawItem(info, ty);
+      }
+      return y + fullBodyH + SECTION_GAP;
+    }
+
+    // ── Slow path: section must split across pages ──
+    // Process items in page-sized chunks
+    let remaining = [...itemInfos];
+    let isFirst = true;
+
+    while (remaining.length > 0) {
+      // Ensure space for title + at least one item
+      const firstItemH = remaining[0].lines.length * LINE_H + ITEM_PAD + PAD * 2;
+      if (y + TITLE_H + firstItemH > PAGE_BOTTOM) {
+        doc.addPage(); drawPageChrome(); y = START_Y;
+      }
+
+      // Draw title
+      y = drawSectionTitle(y, !isFirst);
+      isFirst = false;
+
+      // Determine how many items fit on this page
+      const bodyTop = y;
+      let usedH = PAD * 2; // top + bottom padding
+      let chunkCount = 0;
+
+      for (let i = 0; i < remaining.length; i++) {
+        const itemH = remaining[i].lines.length * LINE_H + ITEM_PAD;
+        if (bodyTop + usedH + itemH > PAGE_BOTTOM && chunkCount > 0) break;
+        usedH += itemH;
+        chunkCount++;
+      }
+
+      // Draw body background for this chunk
+      const chunkBodyH = Math.max(compact ? 8 : 12, usedH);
+      doc.setFillColor(...LGRAY);
+      doc.rect(ML, bodyTop, CW, chunkBodyH, "F");
+      doc.setDrawColor(...BGRAY);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(ML, bodyTop, CW, chunkBodyH, 1, 1, "S");
+
+      // Draw items in this chunk
+      let ty = bodyTop + PAD + LINE_H - 1;
+      const chunk = remaining.splice(0, chunkCount);
+      for (const info of chunk) {
+        ty = drawItem(info, ty);
+      }
+
+      y = bodyTop + chunkBodyH + SECTION_GAP;
+    }
+
+    return y;
   }
 
   // ── Signature / certification block ──────────────────────────────────
   function drawSignatureBlock(y: number): number {
-    const BLOCK_H = 16;
+    const BLOCK_H = compact ? 12 : 16;
 
-    if (y + BLOCK_H + 10 > PH - 18) {
+    if (y + BLOCK_H + 10 > PAGE_BOTTOM) {
       doc.addPage();
       drawPageChrome();
-      y = logoDataUrl ? 42 : 34;
+      y = START_Y;
     }
 
     // Navy background with rounded corners
@@ -505,7 +592,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.roundedRect(ML, y, CW, BLOCK_H, 2, 2, "F");
 
     // Centered certification text
-    doc.setFontSize(7.5);
+    doc.setFontSize(compact ? 6.5 : 7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...WHITE);
     doc.text(
@@ -516,17 +603,17 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     );
 
     // Date/time sub-line
-    doc.setFontSize(6.5);
+    doc.setFontSize(compact ? 5.5 : 6.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...ORANGE);
     doc.text(
       today + " \u00e0 " + timeStr + "  |  R\u00e9f. VR-" + Date.now().toString(36).toUpperCase().slice(-6),
       PW / 2,
-      y + BLOCK_H / 2 + 5,
+      y + BLOCK_H / 2 + (compact ? 4 : 5),
       { align: "center" }
     );
 
-    return y + BLOCK_H + 6;
+    return y + BLOCK_H + (compact ? 4 : 6);
   }
 
   // ── Section title bar only (no body — used for photos heading) ───────
@@ -545,7 +632,30 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // ── PAGE 1 — Report content ───────────────────────────────────────────
   drawPageChrome();
-  let y = logoDataUrl ? 42 : 34;
+  let y = START_Y;
+
+  // ── Height estimation: determine if compact mode is needed ──
+  {
+    const available = PAGE_BOTTOM - y;
+    // Estimate fixed-height elements (normal mode)
+    const metaH   = 26;
+    const kpiH    = 24;
+    const statutH = statutGlobal ? 20 : 0;
+    const sepH    = 6;
+    const sigH    = 22;
+    const impH    = impacts.length > 0 ? (10 + impacts.length * 5 + 4) : 0;
+    const fixedH  = metaH + kpiH + statutH + sepH + sigH + impH;
+    // Estimate section heights (normal mode)
+    const sectH = estimateSectionH(travaux, false) + estimateSectionH(problemes, false)
+                + estimateSectionH(materiel, false) + estimateSectionH(aprevoir, false);
+    const totalNeeded = fixedH + sectH;
+    if (totalNeeded > available) {
+      compact = true;
+      console.log(`[PDF LAYOUT] Mode compact activé (besoin: ${totalNeeded.toFixed(0)}mm, dispo: ${available.toFixed(0)}mm)`);
+    } else {
+      console.log(`[PDF LAYOUT] Mode normal (besoin: ${totalNeeded.toFixed(0)}mm, dispo: ${available.toFixed(0)}mm)`);
+    }
+  }
 
   y = drawMetaBar(y);
 
@@ -559,7 +669,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.setDrawColor(...BGRAY);
   doc.setLineWidth(0.3);
   doc.line(ML, y, PW - MR, y);
-  y += 6;
+  y += compact ? 4 : 6;
 
   // Always draw all 4 sections
   y = drawSection("TRAVAUX R\u00c9ALIS\u00c9S",       travaux,   y, "travaux");
@@ -569,38 +679,40 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // ── Impacts détectés (if any) ──
   if (impacts.length > 0) {
-    const PAD = 5;
+    const IPAD = compact ? 3 : 5;
+    const IMP_LINE_H = compact ? 3.5 : 4.5;
+    const IMP_FONT = compact ? 7 : 8.5;
     // Check page space
-    const impactH = 12 + impacts.length * 6;
-    if (y + impactH > PH - 30) { doc.addPage(); drawPageChrome(); y = logoDataUrl ? 42 : 34; }
+    const impactH = 12 + impacts.length * (IMP_LINE_H + 1);
+    if (y + impactH > PAGE_BOTTOM) { doc.addPage(); drawPageChrome(); y = START_Y; }
 
     // Title bar
-    const IMP_TITLE_H = 8;
+    const IMP_TITLE_H = compact ? 6.5 : 8;
     doc.setFillColor(255, 243, 224); // warm amber background
     doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "F");
     doc.setDrawColor(...ORANGE);
     doc.setLineWidth(0.3);
     doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "S");
-    doc.setFontSize(8);
+    doc.setFontSize(compact ? 6.5 : 8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...ORANGE);
-    doc.text("IMPACTS D\u00c9TECT\u00c9S", ML + PAD, y + 5.5);
+    doc.text("IMPACTS D\u00c9TECT\u00c9S", ML + IPAD, y + (compact ? 4.5 : 5.5));
     y += IMP_TITLE_H + 2;
 
     // Items
-    doc.setFontSize(8.5);
+    doc.setFontSize(IMP_FONT);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...DGRAY);
     for (const imp of impacts) {
       const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
-      const lines = doc.splitTextToSize("\u2022 " + (cleanImp || imp), CW - PAD * 2);
+      const lines = doc.splitTextToSize("\u2022 " + (cleanImp || imp), CW - IPAD * 2);
       for (const line of lines) {
-        if (y + 5 > PH - 18) { doc.addPage(); drawPageChrome(); y = logoDataUrl ? 42 : 34; }
-        doc.text(line, ML + PAD, y + 3);
-        y += 4.5;
+        if (y + 5 > PAGE_BOTTOM) { doc.addPage(); drawPageChrome(); y = START_Y; }
+        doc.text(line, ML + IPAD, y + 3);
+        y += IMP_LINE_H;
       }
     }
-    y += 4;
+    y += compact ? 2 : 4;
   }
 
   // Certification signature block
@@ -611,7 +723,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   if (compressedPhotos.length > 0) {
     doc.addPage();
     drawPageChrome();
-    y = logoDataUrl ? 42 : 34;
+    y = START_Y;
 
     y = drawTitleBar("ANNEXES VISUELLES - PHOTOS DU CHANTIER", y);
 
@@ -621,10 +733,10 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
     for (let i = 0; i < compressedPhotos.length; i++) {
       // Check if we need a new page (at least PHOTO_MIN_H available)
-      if (y + PHOTO_MIN_H > PH - 18) {
+      if (y + PHOTO_MIN_H > PAGE_BOTTOM) {
         doc.addPage();
         drawPageChrome();
-        y = logoDataUrl ? 42 : 34;
+        y = START_Y;
       }
 
       // Photo label
@@ -642,7 +754,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
         console.log(`[PDF PHOTOS] Dimensions originales: ${props.width}x${props.height}`);
         
         // Scale to full content width, respecting aspect ratio and max height
-        const availH = PH - 18 - y - LEGEND_H - 5;
+        const availH = PAGE_BOTTOM - y - LEGEND_H - 5;
         const maxH = Math.max(PHOTO_MIN_H, Math.min(PHOTO_MAX_H, availH));
         let iw = CW;
         let ih = iw * (props.height / props.width);
