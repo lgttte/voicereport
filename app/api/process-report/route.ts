@@ -9,6 +9,7 @@ export const maxDuration = 60; // secondes (Vercel Pro = 300s max, Hobby = 60s)
 
 type ReportSections = {
   statut_global: string;
+  synthese?: string;
   lieu_chantier?: string;
   rapporteur?: string;
   meteo?: string;
@@ -163,6 +164,7 @@ function extractJsonPayload(text: string): ReportSections | null {
 
     return {
       statut_global: optStr(parsed.statut_global ?? parsed.statutGlobal) || "Bon deroulement",
+      synthese: optStr(parsed.synthese) || "",
       lieu_chantier: optStr(parsed.lieu_chantier ?? parsed.lieuChantier),
       rapporteur: optStr(parsed.rapporteur),
       meteo: optStr(parsed.meteo),
@@ -433,6 +435,7 @@ export async function POST(request: NextRequest) {
       `- Probleme urgent/bloquant/critique = "Situation critique" ` +
       `\n\nReponds UNIQUEMENT avec un objet JSON. Inclus UNIQUEMENT les cles pour lesquelles tu as de l'information : ` +
       `- statut_global (OBLIGATOIRE) : exactement "Bon déroulement", "Quelques difficultés", ou "Situation critique" ` +
+      `- synthese (OBLIGATOIRE) : UNE seule phrase de synthèse pour le patron, max 15 mots. Inclure l'impact principal s'il y en a. Ex: "Avancement correct, manque de ciment risque blocage demain", "Journée productive, dalle coulée sans incident" ` +
       `- lieu_chantier (si mentionne) : nom du chantier, adresse, ou ville. IMPORTANT : corrige l'orthographe des noms de villes francaises si la transcription les a mal ecrites (ex: "ma saille" = Marseille, "lion" = Lyon, "too loose" = Toulouse). Ecris le nom correct de la ville. ` +
       `- rapporteur (si mentionne) : nom et/ou poste de la personne qui parle ` +
       `- meteo (si mentionnee) : conditions meteo en quelques mots ` +
@@ -444,9 +447,9 @@ export async function POST(request: NextRequest) {
       `- a_prevoir : TABLEAU d'ACTIONS a planifier uniquement. [] si rien a prevoir. ` +
       `- suggestion_legende_photo : courte phrase decrivant l'avancement ou le probleme principal. ` +
       `\n\nEXEMPLE 1 — vocal simple "On a coulé la dalle ce matin, tout s'est bien passé" : ` +
-      `{"statut_global":"Bon déroulement","travaux_realises":["Coulage de dalle réalisé"],"problemes_rencontres":[],"materiel_manquant":[],"a_prevoir":[],"suggestion_legende_photo":"Coulage de dalle en cours"} ` +
+      `{"statut_global":"Bon déroulement","synthese":"Dalle coulée sans incident, journée productive","travaux_realises":["Coulage de dalle réalisé"],"problemes_rencontres":[],"materiel_manquant":[],"a_prevoir":[],"suggestion_legende_photo":"Coulage de dalle en cours"} ` +
       `\nEXEMPLE 2 — vocal "Il manque du ciment et la bétonnière est en panne, faut appeler le réparateur" : ` +
-      `{"statut_global":"Situation critique","travaux_realises":[],"problemes_rencontres":["[Critique] Bétonnière en panne"],"materiel_manquant":["Ciment"],"a_prevoir":["Commander du ciment","Appeler réparateur bétonnière"],"suggestion_legende_photo":"Bétonnière en panne sur chantier"} ` +
+      `{"statut_global":"Situation critique","synthese":"Bétonnière en panne et manque de ciment, risque de blocage","travaux_realises":[],"problemes_rencontres":["[Critique] Bétonnière en panne"],"materiel_manquant":["Ciment"],"a_prevoir":["Commander du ciment","Appeler réparateur bétonnière"],"suggestion_legende_photo":"Bétonnière en panne sur chantier"} ` +
       `Note : "Ciment" dans materiel (objet physique), "Commander du ciment" dans a_prevoir (action).`;
 
     const anthropicResponse = await anthropic.messages.create({

@@ -29,6 +29,7 @@ type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "succe
 
 type ReportSections = {
   statut_global: string;
+  synthese?: string;
   lieu_chantier?: string;
   rapporteur?: string;
   meteo?: string;
@@ -45,6 +46,12 @@ function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
   const s = (seconds % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+function parseSeverity(item: string): { level: "critique" | "attention" | "normal"; text: string } {
+  if (item.startsWith("[Critique]")) return { level: "critique", text: item.replace(/^\[Critique\]\s*/, "") };
+  if (item.startsWith("[Attention]")) return { level: "attention", text: item.replace(/^\[Attention\]\s*/, "") };
+  return { level: "normal", text: item };
 }
 
 function buildReportText(report: ReportSections) {
@@ -86,6 +93,7 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [showEmailEdit, setShowEmailEdit] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -363,9 +371,9 @@ export default function Home() {
   // ── Statut global badge logic ──
   const statutRaw = report?.statut_global || "";
   const statutLevel: "green" | "orange" | "red" | "none" =
-    statutRaw.includes("🟢") || statutRaw.toLowerCase().includes("fluide") ? "green"
-    : statutRaw.includes("🟠") || statutRaw.toLowerCase().includes("difficulte") ? "orange"
-    : statutRaw.includes("🔴") || statutRaw.toLowerCase().includes("critique") || statutRaw.toLowerCase().includes("probleme") ? "red"
+    /bon\s*d[eé]roulement|fluide|🟢/i.test(statutRaw) ? "green"
+    : /quelques?\s*difficult[eé]s?|🟠/i.test(statutRaw) ? "orange"
+    : /critique|🔴|urgent|grave|probl[eè]me/i.test(statutRaw) ? "red"
     : "none";
 
   const statutStyles: Record<string, string> = {
@@ -373,6 +381,16 @@ export default function Home() {
     orange: "border-amber-500/30   bg-amber-500/10   text-amber-300",
     red:    "border-red-500/30     bg-red-500/10     text-red-300",
     none:   "border-slate-700      bg-slate-800/50    text-slate-300",
+  };
+
+  const statutEmoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
+  const statutLabel: Record<string, string> = { green: "Bon déroulement", orange: "Quelques difficultés", red: "Situation critique", none: statutRaw };
+
+  const sectionCardStyles: Record<string, { border: string; icon: string }> = {
+    "Travaux réalisés":     { border: "border-l-emerald-400", icon: "text-emerald-400" },
+    "Problèmes rencontrés": { border: "border-l-red-400",     icon: "text-red-400" },
+    "Matériel manquant":    { border: "border-l-amber-400",   icon: "text-amber-400" },
+    "À prévoir":            { border: "border-l-sky-400",     icon: "text-sky-400" },
   };
 
   const reportSections = [
@@ -394,9 +412,9 @@ export default function Home() {
 
           <div className="relative z-10 flex flex-col items-center w-full max-w-sm text-center">
             <CheckCircle className="h-24 w-24 text-emerald-400 animate-scaleIn mb-8" />
-            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">Rapport envoyé avec succès&nbsp;!</h1>
+            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">Rapport envoyé&nbsp;!</h1>
             <p className="text-base text-slate-400 mb-10 leading-relaxed animate-fadeInUp stagger-3">
-              Le récapitulatif a bien été transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span>.
+              Transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span>
             </p>
             <button
               type="button"
@@ -404,7 +422,7 @@ export default function Home() {
               className="flex items-center gap-2.5 rounded-xl bg-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] animate-fadeInUp stagger-4"
             >
               <Mic className="h-4 w-4" />
-              Faire un nouveau rapport
+              Nouveau rapport
             </button>
           </div>
         </main>
@@ -512,85 +530,104 @@ export default function Home() {
       );
     }
 
-    return (
-      <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
+    // ── Recording screen ──
+    if (isRecording) {
+      return (
+        <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
+          <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
+            {/* Recording indicator */}
+            <div className="flex items-center gap-2 mb-6 animate-fadeIn">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500 blink" />
+              <span className="text-sm font-medium text-red-400">En écoute...</span>
+            </div>
 
-        <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
-
-          {/* Dynamic action text — above timer */}
-          {isRecording ? (
-            <p className="mb-6 text-center text-lg font-light text-red-400 animate-pulse">
-              Enregistrement en cours...
+            {/* Timer */}
+            <p className="text-5xl font-light font-mono text-white tracking-widest mb-8 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+              {formatTime(elapsed)}
             </p>
-          ) : (
-            <p className="mb-6 text-center text-lg font-light text-white/80">
-              Décrivez votre journée de chantier
-            </p>
-          )}
 
-          {/* Timer — naked typography */}
-          <p className="text-5xl font-light font-mono text-white tracking-widest mb-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-            {formatTime(elapsed)}
-          </p>
+            {/* Sound wave visualization */}
+            <div className="flex items-center justify-center gap-[5px] h-10 mb-10">
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="w-[3px] rounded-full bg-red-400/70 sound-bar"
+                  style={{ animationDelay: `${i * 0.12}s` }}
+                />
+              ))}
+            </div>
 
-          {/* Button container — flat design */}
-          <div className="relative flex items-center justify-center">
-
-
+            {/* Stop button */}
             <button
               type="button"
               onClick={handleButtonClick}
-              className={`relative z-10 flex h-36 w-36 items-center justify-center rounded-full shadow-none text-white transition-all duration-300 focus:outline-none active:scale-95 ${
-                isRecording
-                  ? "bg-red-700 hover:bg-red-600"
-                  : "bg-red-600 hover:bg-red-500 hover:scale-105"
-              }`}
+              className="relative z-10 flex h-36 w-36 items-center justify-center rounded-full bg-red-700 hover:bg-red-600 text-white transition-all duration-300 focus:outline-none active:scale-95 shadow-none pulse-ring"
             >
-              {isRecording ? (
-                <Square className="h-12 w-12 fill-white" />
-              ) : (
-                <Mic className="h-12 w-12" />
-              )}
+              <Square className="h-12 w-12 fill-white" />
             </button>
+
+            {/* Instruction */}
+            <p className="text-sm font-light text-slate-400 mt-6">
+              Appuyez pour terminer
+            </p>
+          </div>
+        </main>
+      );
+    }
+
+    // ── Idle screen (default) ──
+    return (
+      <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
+        <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-800/60 border border-slate-700/50 px-3.5 py-1.5 mb-6 animate-fadeIn">
+            <span className="text-xs text-slate-400">⏱️ 30 secondes suffisent</span>
           </div>
 
-          {/* Micro-copy — reassurance */}
-          <p className="text-sm font-light text-slate-300 mt-6">
-            Parlez naturellement, comme à votre patron.
+          {/* Title */}
+          <h1 className="text-xl font-semibold text-white mb-1.5 animate-fadeIn stagger-1">
+            Nouveau rapport
+          </h1>
+          <p className="text-sm font-light text-slate-400 mb-10 animate-fadeIn stagger-2">
+            Appuyez et décrivez votre journée
           </p>
 
-          {/* Guidance lines — friction-zero */}
-          {!isRecording && (
-            <div className="mt-12 w-full space-y-1.5">
-              {([
-                { icon: MapPin,        title: "Lieu",       example: "ex: Maison Dupont à Lyon" },
-                { icon: Hammer,        title: "Travaux",    example: "ex: Coulage dalle, coffrage..." },
-                { icon: AlertTriangle, title: "Problèmes",  example: "ex: Retard livraison, intempéries" },
-                { icon: Package,       title: "Matériel",   example: "ex: Il manque 5 sacs de ciment" },
-              ] as { icon: React.ElementType; title: string; example: string }[]).map(
-                ({ icon: Icon, title, example }, idx) => (
-                  <div
-                    key={title}
-                    className={`flex items-center gap-3 rounded-2xl bg-slate-800/40 hover:bg-slate-800/60 transition-colors duration-200 p-3 px-4 animate-fadeInUp stagger-${idx + 3}`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0 text-slate-500" />
-                    <span className="text-white text-sm font-medium drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">{title}</span>
-                    <span className="text-slate-400 text-sm font-light truncate">{example}</span>
+          {/* Mic button */}
+          <button
+            type="button"
+            onClick={handleButtonClick}
+            className="relative z-10 flex h-36 w-36 items-center justify-center rounded-full bg-red-600 hover:bg-red-500 hover:scale-105 text-white transition-all duration-300 focus:outline-none active:scale-95 shadow-none animate-scaleIn stagger-2"
+          >
+            <Mic className="h-12 w-12" />
+          </button>
+
+          {/* Reassurance */}
+          <p className="text-sm font-light text-slate-400 mt-6 animate-fadeIn stagger-3">
+            Parlez naturellement, comme à votre patron
+          </p>
+
+          {/* Hint chips — compact 2×2 grid */}
+          <div className="mt-10 grid grid-cols-2 gap-2 w-full">
+            {([
+              { icon: MapPin,        label: "Lieu",       hint: "Chantier, ville" },
+              { icon: Hammer,        label: "Travaux",    hint: "Ce qui a été fait" },
+              { icon: AlertTriangle, label: "Problèmes",  hint: "Retards, pannes" },
+              { icon: Package,       label: "Matériel",   hint: "Ce qui manque" },
+            ] as { icon: React.ElementType; label: string; hint: string }[]).map(
+              ({ icon: Icon, label, hint }, idx) => (
+                <div
+                  key={label}
+                  className={`flex items-center gap-2.5 rounded-xl bg-slate-800/40 p-3 animate-fadeInUp stagger-${idx + 4}`}
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-slate-500" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white">{label}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{hint}</p>
                   </div>
-                )
-              )}
-            </div>
-          )}
-
-          {/* Example — minimalist quote */}
-          {!isRecording && (
-            <div className="border-l-[1.5px] border-slate-800 pl-4 py-1 mt-8 animate-fadeIn stagger-7">
-              <p className="text-slate-300 font-light text-sm italic leading-relaxed">
-                &laquo;&nbsp;On a fini de couler la dalle chez Dupont. Par contre la toupie est arrivée en retard de 2h, et il nous manque du ciment pour demain.&nbsp;&raquo;
-              </p>
-            </div>
-          )}
-
+                </div>
+              )
+            )}
+          </div>
         </div>
       </main>
     );
@@ -599,15 +636,22 @@ export default function Home() {
   // Vue 2 : Validation — Mobile-first, single column
   return (
     <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-8">
-      <div className="mx-auto w-full max-w-md space-y-5">
+      <div className="mx-auto w-full max-w-md space-y-4">
 
-        {/* Statut global — hero badge (tout en haut, très grand) */}
+        {/* ── Status badge — hero ── */}
         {statutRaw && (
           <div
-            className={`rounded-2xl border-2 px-5 py-5 text-center animate-scaleIn ${statutStyles[statutLevel]}`}
+            className={`rounded-2xl border-2 px-5 py-4 text-center animate-scaleIn ${statutStyles[statutLevel]}`}
           >
-            <p className="text-2xl font-bold leading-tight">{statutRaw}</p>
+            <p className="text-lg font-bold leading-tight">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
           </div>
+        )}
+
+        {/* ── AI Synthesis — one-liner ── */}
+        {report?.synthese && (
+          <p className="text-sm italic text-slate-300 text-center leading-relaxed px-2 animate-fadeIn stagger-1">
+            &laquo;&nbsp;{report.synthese}&nbsp;&raquo;
+          </p>
         )}
 
         {/* Message feedback */}
@@ -626,7 +670,6 @@ export default function Home() {
             </div>
           )}
           <h1 className="text-2xl font-semibold tracking-tight text-white">Votre rapport</h1>
-          <p className="text-sm text-slate-500">Relisez, modifiez si besoin, puis envoyez.</p>
         </div>
 
         {/* Cartes du rapport / Édition */}
@@ -647,25 +690,40 @@ export default function Home() {
           <div className="space-y-3">
             {reportSections.map((section, idx) => {
               const hasItems = section.items.length > 0;
+              const cardStyle = sectionCardStyles[section.title] || { border: "border-l-slate-600", icon: "text-slate-500" };
+              const isProblemes = section.title === "Problèmes rencontrés";
               return (
                 <div
                   key={section.title}
-                  className={`rounded-xl border border-slate-800 bg-slate-900/50 p-4 animate-fadeInUp stagger-${idx + 2}`}
+                  className={`rounded-xl border border-slate-800 border-l-[3px] ${cardStyle.border} bg-slate-900/50 p-4 animate-fadeInUp stagger-${idx + 2}`}
                 >
                   <div className="mb-2 flex items-center gap-2.5">
-                    <section.icon className="h-4 w-4 shrink-0 text-slate-500" />
+                    <section.icon className={`h-4 w-4 shrink-0 ${cardStyle.icon}`} />
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                       {section.title}
                     </p>
                   </div>
                   {hasItems ? (
                     <ul className="space-y-1.5">
-                      {section.items.map((item, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500" />
-                          {item}
-                        </li>
-                      ))}
+                      {section.items.map((item, i) => {
+                        if (isProblemes) {
+                          const { level, text } = parseSeverity(item);
+                          return (
+                            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200">
+                              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                                level === "critique" ? "bg-red-500" : level === "attention" ? "bg-amber-500" : "bg-slate-500"
+                              }`} />
+                              {text}
+                            </li>
+                          );
+                        }
+                        return (
+                          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500" />
+                            {item}
+                          </li>
+                        );
+                      })}
                     </ul>
                   ) : (
                     <p className="text-sm text-slate-500 italic">Rien à signaler</p>
@@ -740,25 +798,45 @@ export default function Home() {
           )}
         </div>
 
-        {/* Zone email */}
-        <div className="space-y-2 animate-fadeInUp stagger-7">
-          <label
-            htmlFor="email-input"
-            className="text-xs font-semibold uppercase tracking-wider text-slate-400"
-          >
-            Destinataire
-          </label>
-          <div className="relative">
-            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
-            <input
-              id="email-input"
-              type="email"
-              value={recipientEmail}
-              onChange={(event) => setRecipientEmail(event.target.value)}
-              className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-3 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
-              placeholder="adresse@client.com"
-            />
-          </div>
+        {/* Email — simplified */}
+        <div className="animate-fadeInUp stagger-7">
+          {recipientEmail && !showEmailEdit ? (
+            <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Mail className="h-4 w-4 shrink-0 text-slate-500" />
+                <span className="text-sm text-slate-200 truncate">{recipientEmail}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEmailEdit(true)}
+                className="text-xs text-slate-500 hover:text-white transition shrink-0 ml-3"
+              >
+                Modifier
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                htmlFor="email-input"
+                className="text-xs font-semibold uppercase tracking-wider text-slate-400"
+              >
+                Destinataire
+              </label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                <input
+                  id="email-input"
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(event) => setRecipientEmail(event.target.value)}
+                  onBlur={() => { if (recipientEmail) setShowEmailEdit(false); }}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-3 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
+                  placeholder="patron@entreprise.fr"
+                  autoFocus={showEmailEdit}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bouton principal */}
@@ -773,7 +851,7 @@ export default function Home() {
           ) : (
             <Send className="h-4 w-4" />
           )}
-          {isSending ? "Envoi en cours..." : "Valider & Envoyer"}
+          {isSending ? "Envoi en cours..." : recipientEmail ? `Envoyer à ${recipientEmail.split("@")[0]}@…` : "Valider & Envoyer"}
         </button>
 
         {/* Boutons secondaires */}
