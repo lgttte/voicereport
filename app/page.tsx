@@ -22,6 +22,9 @@ import {
   Pause,
   RotateCcw,
   Sparkles,
+  TrendingUp,
+  Zap,
+  Bell,
 } from "lucide-react";
 import Chat from "./components/Chat";
 
@@ -30,6 +33,9 @@ type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "succe
 type ReportSections = {
   statut_global: string;
   synthese?: string;
+  score?: number;
+  alertes?: string[];
+  impacts?: string[];
   lieu_chantier?: string;
   rapporteur?: string;
   meteo?: string;
@@ -515,16 +521,29 @@ export default function Home() {
     if (stage === "processing") {
       return (
         <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-          <div className="flex flex-col items-center gap-5 animate-fadeIn">
-            <div className="flex h-36 w-36 items-center justify-center rounded-full animate-scaleIn">
-              <Loader2 className="h-14 w-14 text-sky-400 animate-spin" />
+          <div className="flex flex-col items-center gap-6 animate-fadeIn">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full animate-scaleIn">
+              <Loader2 className="h-12 w-12 text-sky-400 animate-spin" />
             </div>
-            <p className="text-base font-light text-sky-400 animate-pulse animate-fadeInUp stagger-2">
-              Analyse de votre rapport en cours...
-            </p>
-            <p className="text-sm font-light text-slate-500 animate-fadeInUp stagger-3">
-              Notre IA structure votre rapport...
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-base font-medium text-white animate-fadeInUp stagger-2">
+                Analyse en cours...
+              </p>
+              <div className="space-y-1.5 animate-fadeInUp stagger-3">
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-sky-400 animate-pulse" />
+                  Transcription vocale
+                </p>
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-slate-600" />
+                  Structuration du rapport
+                </p>
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-slate-600" />
+                  Analyse des risques
+                </p>
+              </div>
+            </div>
           </div>
         </main>
       );
@@ -634,24 +653,62 @@ export default function Home() {
   }
 
   // Vue 2 : Validation — Mobile-first, single column
+  const scoreValue = report?.score;
+  const scoreColor = scoreValue && scoreValue >= 7 ? "text-emerald-400" : scoreValue && scoreValue >= 5 ? "text-amber-400" : "text-red-400";
+  const scoreBg = scoreValue && scoreValue >= 7 ? "bg-emerald-500/10 border-emerald-500/30" : scoreValue && scoreValue >= 5 ? "bg-amber-500/10 border-amber-500/30" : "bg-red-500/10 border-red-500/30";
+  const alertes = report?.alertes || [];
+  const impacts = report?.impacts || [];
+
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-8">
+    <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
       <div className="mx-auto w-full max-w-md space-y-4">
 
-        {/* ── Status badge — hero ── */}
-        {statutRaw && (
-          <div
-            className={`rounded-2xl border-2 px-5 py-4 text-center animate-scaleIn ${statutStyles[statutLevel]}`}
-          >
-            <p className="text-lg font-bold leading-tight">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
+        {/* ── TOP BAR: Status + Score ── */}
+        <div className="flex items-stretch gap-3 animate-scaleIn">
+          {/* Status badge */}
+          <div className={`flex-1 rounded-2xl border-2 px-4 py-3.5 text-center ${statutStyles[statutLevel]}`}>
+            <p className="text-base font-bold leading-tight">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
           </div>
-        )}
+          {/* Score */}
+          {scoreValue && (
+            <div className={`flex flex-col items-center justify-center rounded-2xl border-2 px-5 py-3.5 ${scoreBg}`}>
+              <p className={`text-2xl font-bold leading-none ${scoreColor}`}>{scoreValue}</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">/10</p>
+            </div>
+          )}
+        </div>
 
-        {/* ── AI Synthesis — one-liner ── */}
+        {/* ── AI Synthesis ── */}
         {report?.synthese && (
           <p className="text-sm italic text-slate-300 text-center leading-relaxed px-2 animate-fadeIn stagger-1">
             &laquo;&nbsp;{report.synthese}&nbsp;&raquo;
           </p>
+        )}
+
+        {/* ── Alerts banner ── */}
+        {alertes.length > 0 && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 space-y-2 animate-fadeInUp stagger-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Bell className="h-3.5 w-3.5 text-red-400" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-400">Alertes</p>
+            </div>
+            {alertes.map((a, i) => (
+              <p key={i} className="text-sm text-red-200 leading-relaxed">{a}</p>
+            ))}
+          </div>
+        )}
+
+        {/* ── Business impacts ── */}
+        {impacts.length > 0 && (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-2 animate-fadeInUp stagger-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Impacts détectés</p>
+            </div>
+            {impacts.map((imp, i) => (
+              <p key={i} className="text-sm text-amber-200/80 leading-relaxed">{imp}</p>
+            ))}
+          </div>
         )}
 
         {/* Message feedback */}
@@ -661,15 +718,20 @@ export default function Home() {
           </div>
         )}
 
-        {/* Lieu + Titre */}
-        <div className="space-y-1 animate-fadeIn stagger-1">
+        {/* Lieu + meta */}
+        <div className="flex items-center gap-3 animate-fadeIn stagger-1">
           {report?.lieu_chantier && (
-            <div className="flex items-center gap-2 text-sm text-slate-400">
+            <div className="flex items-center gap-1.5 text-sm text-slate-400">
               <MapPin className="h-3.5 w-3.5" />
               {report.lieu_chantier}
             </div>
           )}
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Votre rapport</h1>
+          {report?.equipe && (
+            <span className="text-xs text-slate-500">• {report.equipe}</span>
+          )}
+          {report?.avancement && (
+            <span className="text-xs text-slate-500">• {report.avancement}</span>
+          )}
         </div>
 
         {/* Cartes du rapport / Édition */}
