@@ -29,6 +29,7 @@ async function compressImage(file: File): Promise<Buffer> {
 
     // Compression drastique avec sharp
     const compressedBuffer = await sharp(inputBuffer)
+      .rotate() // Auto-rotate based on EXIF orientation (critical for phone photos)
       .resize(800, 600, { // Redimensionnement à 800x600 max (suffisant pour un PDF)
         fit: "inside",
         withoutEnlargement: true,
