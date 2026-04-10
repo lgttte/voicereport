@@ -568,6 +568,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // ── Impacts détectés (if any) ──
   if (impacts.length > 0) {
+    const PAD = 5;
     // Check page space
     const impactH = 12 + impacts.length * 6;
     if (y + impactH > PH - 30) { doc.addPage(); drawPageChrome(); y = logoDataUrl ? 42 : 34; }
