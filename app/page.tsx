@@ -25,10 +25,14 @@ import {
   TrendingUp,
   Zap,
   Bell,
+  Clock,
+  ChevronRight,
+  Trash2,
+  BarChart3,
 } from "lucide-react";
 import Chat from "./components/Chat";
 
-type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success";
+type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success" | "history";
 
 type ReportSections = {
   statut_global: string;
@@ -58,6 +62,48 @@ function parseSeverity(item: string): { level: "critique" | "attention" | "norma
   if (item.startsWith("[Critique]")) return { level: "critique", text: item.replace(/^\[Critique\]\s*/, "") };
   if (item.startsWith("[Attention]")) return { level: "attention", text: item.replace(/^\[Attention\]\s*/, "") };
   return { level: "normal", text: item };
+}
+
+type SavedReport = {
+  id: string;
+  date: string;
+  report: ReportSections;
+  recipientEmail: string;
+};
+
+const HISTORY_KEY = "voicereport_history";
+const MAX_HISTORY = 50;
+
+function loadHistory(): SavedReport[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveToHistory(report: ReportSections, recipientEmail: string) {
+  const history = loadHistory();
+  const entry: SavedReport = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    date: new Date().toISOString(),
+    report,
+    recipientEmail,
+  };
+  history.unshift(entry);
+  if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function deleteFromHistory(id: string) {
+  const history = loadHistory().filter(h => h.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function getStatusLevel(statut: string): "green" | "orange" | "red" | "none" {
+  if (/bon\s*d[eé]roulement|fluide|🟢/i.test(statut)) return "green";
+  if (/quelques?\s*difficult[eé]s?|🟠/i.test(statut)) return "orange";
+  if (/critique|🔴|urgent|grave|probl[eè]me/i.test(statut)) return "red";
+  return "none";
 }
 
 function buildReportText(report: ReportSections) {
@@ -100,6 +146,8 @@ export default function Home() {
   const [playbackTime, setPlaybackTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [showEmailEdit, setShowEmailEdit] = useState(false);
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [historyDetail, setHistoryDetail] = useState<SavedReport | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -120,6 +168,7 @@ export default function Home() {
     if (storedEmail) {
       setRecipientEmail(storedEmail);
     }
+    setSavedReports(loadHistory());
     return () => stopTimer();
   }, [stopTimer]);
 
@@ -360,6 +409,10 @@ export default function Home() {
 
       const result = await response.json();
       localStorage.setItem("lastRecipientEmail", recipientEmail);
+      if (report) {
+        saveToHistory(report, recipientEmail);
+        setSavedReports(loadHistory());
+      }
       setMessage(result.message ?? "Rapport envoyé avec succès !");
       setStage("success");
     } catch (error) {
@@ -430,6 +483,108 @@ export default function Home() {
               <Mic className="h-4 w-4" />
               Nouveau rapport
             </button>
+          </div>
+        </main>
+      );
+    }
+
+    // ── History screen ──
+    if (stage === "history") {
+      const detail = historyDetail;
+      if (detail) {
+        const r = detail.report;
+        const sl = getStatusLevel(r.statut_global);
+        const emoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
+        const detailSections = [
+          { title: "Travaux réalisés",     items: r.travaux_realises || [] },
+          { title: "Problèmes rencontrés", items: r.problemes_rencontres || [] },
+          { title: "Matériel manquant",    items: r.materiel_manquant || [] },
+          { title: "À prévoir",            items: r.a_prevoir || [] },
+        ];
+        return (
+          <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
+            <div className="mx-auto w-full max-w-md space-y-4">
+              <button type="button" onClick={() => setHistoryDetail(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-2">
+                <ChevronRight className="h-4 w-4 rotate-180" /> Retour
+              </button>
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-white">{emoji[sl]} {r.lieu_chantier || "Rapport"}</span>
+                  {r.score && <span className="text-lg font-bold text-amber-400">{r.score}/10</span>}
+                </div>
+                <p className="text-xs text-slate-500">{new Date(detail.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} — {detail.recipientEmail}</p>
+                {r.synthese && <p className="text-sm italic text-slate-300">&laquo;&nbsp;{r.synthese}&nbsp;&raquo;</p>}
+                <p className="text-sm text-slate-300">{r.statut_global}</p>
+                {(r.alertes && r.alertes.length > 0) && (
+                  <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3">
+                    <p className="text-xs font-semibold text-red-400 mb-1">⚠️ Alertes</p>
+                    {r.alertes.map((a, i) => <p key={i} className="text-xs text-red-300">• {a}</p>)}
+                  </div>
+                )}
+                {detailSections.map(s => (
+                  <div key={s.title}>
+                    <p className="text-xs font-semibold text-slate-400 mb-1">{s.title}</p>
+                    {s.items.length > 0 ? s.items.map((item, i) => {
+                      const { level, text } = parseSeverity(item);
+                      return <p key={i} className={`text-sm ${level === "critique" ? "text-red-400" : level === "attention" ? "text-amber-400" : "text-slate-300"}`}>• {text}</p>;
+                    }) : <p className="text-xs text-slate-600 italic">Rien à signaler</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </main>
+        );
+      }
+
+      return (
+        <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
+          <div className="mx-auto w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <button type="button" onClick={() => { setStage("idle"); setHistoryDetail(null); }} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
+                <ChevronRight className="h-4 w-4 rotate-180" /> Retour
+              </button>
+              {savedReports.length > 0 && (
+                <button type="button" onClick={() => { localStorage.removeItem(HISTORY_KEY); setSavedReports([]); }} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors">
+                  <Trash2 className="h-3.5 w-3.5" /> Tout effacer
+                </button>
+              )}
+            </div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="h-5 w-5 text-slate-400" /> Historique
+              {savedReports.length > 0 && <span className="text-sm font-normal text-slate-500">({savedReports.length})</span>}
+            </h2>
+            {savedReports.length === 0 ? (
+              <div className="text-center py-16">
+                <Clock className="h-12 w-12 text-slate-700 mx-auto mb-4" />
+                <p className="text-sm text-slate-500">Aucun rapport envoyé</p>
+                <p className="text-xs text-slate-600 mt-1">Vos rapports apparaîtront ici</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {savedReports.map((sr) => {
+                  const sl = getStatusLevel(sr.report.statut_global);
+                  const emoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
+                  return (
+                    <button
+                      type="button"
+                      key={sr.id}
+                      onClick={() => setHistoryDetail(sr)}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-left transition-all hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-white truncate mr-2">{emoji[sl]} {sr.report.lieu_chantier || "Rapport"}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {sr.report.score && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
+                          <ChevronRight className="h-4 w-4 text-slate-600" />
+                        </div>
+                      </div>
+                      {sr.report.synthese && <p className="text-xs text-slate-400 line-clamp-1 mb-1">{sr.report.synthese}</p>}
+                      <p className="text-[11px] text-slate-600">{new Date(sr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </main>
       );
@@ -647,6 +802,19 @@ export default function Home() {
               )
             )}
           </div>
+
+          {/* History button */}
+          {savedReports.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setStage("history")}
+              className="mt-6 flex items-center justify-center gap-2 w-full rounded-xl bg-slate-800/40 border border-slate-700/50 px-4 py-3 text-sm text-slate-400 hover:text-white hover:border-slate-600 transition-all animate-fadeIn stagger-8"
+            >
+              <Clock className="h-4 w-4" />
+              Historique
+              <span className="ml-auto rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-300">{savedReports.length}</span>
+            </button>
+          )}
         </div>
       </main>
     );
