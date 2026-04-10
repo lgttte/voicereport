@@ -698,19 +698,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── Business impacts ── */}
-        {impacts.length > 0 && (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-2 animate-fadeInUp stagger-2">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="h-3.5 w-3.5 text-amber-400" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">Impacts détectés</p>
-            </div>
-            {impacts.map((imp, i) => (
-              <p key={i} className="text-sm text-amber-200/80 leading-relaxed">{imp}</p>
-            ))}
-          </div>
-        )}
-
         {/* Message feedback */}
         {message && (
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm leading-relaxed text-emerald-200">

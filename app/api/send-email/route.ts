@@ -111,6 +111,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const equipe       = optStr(reportData.equipe);
   const avancement   = optStr(reportData.avancement);
   const statutGlobal = sanitizeEmoji(reportData.statut_global || "");
+  const impacts   = toArray((reportData as Record<string, unknown>).impacts).map(sanitizeEmoji);
 
   console.log(`[PDF GENERATION] ========== DEBUT DE LA GENERATION ==========`);
   console.log(`[PDF GENERATION] Nombre d'images: ${photos.length}`);
@@ -564,6 +565,41 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   y = drawSection("PROBL\u00c8MES RENCONTR\u00c9S", problemes, y, "problemes");
   y = drawSection("MAT\u00c9RIEL MANQUANT",      materiel,  y, "materiel");
   y = drawSection("\u00c0 PR\u00c9VOIR / SUITE",      aprevoir,  y, "aprevoir");
+
+  // ── Impacts détectés (if any) ──
+  if (impacts.length > 0) {
+    // Check page space
+    const impactH = 12 + impacts.length * 6;
+    if (y + impactH > PH - 30) { doc.addPage(); drawPageChrome(); y = logoDataUrl ? 42 : 34; }
+
+    // Title bar
+    const IMP_TITLE_H = 8;
+    doc.setFillColor(255, 243, 224); // warm amber background
+    doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "F");
+    doc.setDrawColor(...ORANGE);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "S");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...ORANGE);
+    doc.text("IMPACTS D\u00c9TECT\u00c9S", ML + PAD, y + 5.5);
+    y += IMP_TITLE_H + 2;
+
+    // Items
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DGRAY);
+    for (const imp of impacts) {
+      const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
+      const lines = doc.splitTextToSize("\u2022 " + (cleanImp || imp), CW - PAD * 2);
+      for (const line of lines) {
+        if (y + 5 > PH - 18) { doc.addPage(); drawPageChrome(); y = logoDataUrl ? 42 : 34; }
+        doc.text(line, ML + PAD, y + 3);
+        y += 4.5;
+      }
+    }
+    y += 4;
+  }
 
   // Certification signature block
   y = drawSignatureBlock(y);
