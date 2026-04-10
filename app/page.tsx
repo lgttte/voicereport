@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import Chat from "./components/Chat";
 
-type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success" | "history";
+type Stage = "idle" | "recording" | "preview" | "processing" | "review" | "success" | "dashboard";
 
 type ReportSections = {
   statut_global: string;
@@ -106,6 +106,54 @@ function getStatusLevel(statut: string): "green" | "orange" | "red" | "none" {
   return "none";
 }
 
+// ── Dashboard data structures ──
+type Chantier = {
+  name: string;
+  latestReport: SavedReport;
+  allReports: SavedReport[];
+  status: "green" | "orange" | "red" | "none";
+  score: number | null;
+  alertes: string[];
+  topProblems: string[];
+};
+
+function buildChantiers(reports: SavedReport[]): Chantier[] {
+  const grouped = new Map<string, SavedReport[]>();
+  for (const r of reports) {
+    const key = (r.report.lieu_chantier || "Sans lieu").trim();
+    const list = grouped.get(key) || [];
+    list.push(r);
+    grouped.set(key, list);
+  }
+
+  const chantiers: Chantier[] = [];
+  for (const [name, reps] of grouped) {
+    const sorted = [...reps].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latest = sorted[0];
+    const r = latest.report;
+    const status = getStatusLevel(r.statut_global);
+    const allAlertes: string[] = [];
+    for (const rep of sorted.slice(0, 3)) {
+      if (rep.report.alertes) allAlertes.push(...rep.report.alertes);
+    }
+    const topProblems = (r.problemes_rencontres || []).slice(0, 3).map(p => parseSeverity(p).text);
+    chantiers.push({
+      name,
+      latestReport: latest,
+      allReports: sorted,
+      status,
+      score: r.score ?? null,
+      alertes: [...new Set(allAlertes)].slice(0, 5),
+      topProblems,
+    });
+  }
+
+  // Sort: red first, then orange, then none, then green
+  const order: Record<string, number> = { red: 0, orange: 1, none: 2, green: 3 };
+  chantiers.sort((a, b) => (order[a.status] ?? 2) - (order[b.status] ?? 2));
+  return chantiers;
+}
+
 function buildReportText(report: ReportSections) {
   const parts = [];
   if (report.statut_global) parts.push(`Statut global : ${report.statut_global}`);
@@ -147,7 +195,8 @@ export default function Home() {
   const [audioDuration, setAudioDuration] = useState(0);
   const [showEmailEdit, setShowEmailEdit] = useState(false);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
-  const [historyDetail, setHistoryDetail] = useState<SavedReport | null>(null);
+  const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
+  const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -488,13 +537,22 @@ export default function Home() {
       );
     }
 
-    // ── History screen ──
-    if (stage === "history") {
-      const detail = historyDetail;
-      if (detail) {
-        const r = detail.report;
+    // ── Dashboard screen ──
+    if (stage === "dashboard") {
+      const chantiers = buildChantiers(savedReports);
+      const total = chantiers.length;
+      const okCount = chantiers.filter(c => c.status === "green").length;
+      const warnCount = chantiers.filter(c => c.status === "orange" || c.status === "red").length;
+      const critCount = chantiers.filter(c => c.status === "red").length;
+      const needAttention = chantiers.filter(c => c.status === "red" || c.status === "orange");
+      const allAlertes = chantiers.flatMap(c => c.alertes.map(a => ({ chantier: c.name, text: a, status: c.status })));
+      const statusEmoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
+      const statusLabel: Record<string, string> = { green: "OK", orange: "Attention", red: "Critique", none: "—" };
+
+      // ── Report detail sub-view ──
+      if (dashboardReportDetail) {
+        const r = dashboardReportDetail.report;
         const sl = getStatusLevel(r.statut_global);
-        const emoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
         const detailSections = [
           { title: "Travaux réalisés",     items: r.travaux_realises || [] },
           { title: "Problèmes rencontrés", items: r.problemes_rencontres || [] },
@@ -504,17 +562,19 @@ export default function Home() {
         return (
           <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
             <div className="mx-auto w-full max-w-md space-y-4">
-              <button type="button" onClick={() => setHistoryDetail(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-2">
+              <button type="button" onClick={() => setDashboardReportDetail(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-2">
                 <ChevronRight className="h-4 w-4 rotate-180" /> Retour
               </button>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-3 animate-fadeIn">
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-white">{emoji[sl]} {r.lieu_chantier || "Rapport"}</span>
+                  <span className="text-lg font-bold text-white">{statusEmoji[sl]} {r.lieu_chantier || "Rapport"}</span>
                   {r.score && <span className="text-lg font-bold text-amber-400">{r.score}/10</span>}
                 </div>
-                <p className="text-xs text-slate-500">{new Date(detail.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} — {detail.recipientEmail}</p>
+                <p className="text-xs text-slate-500">{new Date(dashboardReportDetail.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} — {dashboardReportDetail.recipientEmail}</p>
                 {r.synthese && <p className="text-sm italic text-slate-300">&laquo;&nbsp;{r.synthese}&nbsp;&raquo;</p>}
                 <p className="text-sm text-slate-300">{r.statut_global}</p>
+                {r.equipe && <p className="text-xs text-slate-400">👷 Équipe : {r.equipe}</p>}
+                {r.avancement && <p className="text-xs text-slate-400">📊 Avancement : {r.avancement}</p>}
                 {(r.alertes && r.alertes.length > 0) && (
                   <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3">
                     <p className="text-xs font-semibold text-red-400 mb-1">⚠️ Alertes</p>
@@ -536,54 +596,227 @@ export default function Home() {
         );
       }
 
-      return (
-        <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
-          <div className="mx-auto w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <button type="button" onClick={() => { setStage("idle"); setHistoryDetail(null); }} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
-                <ChevronRight className="h-4 w-4 rotate-180" /> Retour
+      // ── Chantier detail sub-view ──
+      if (dashboardChantier) {
+        const c = dashboardChantier;
+        return (
+          <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
+            <div className="mx-auto w-full max-w-md space-y-4">
+              <button type="button" onClick={() => setDashboardChantier(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
+                <ChevronRight className="h-4 w-4 rotate-180" /> Dashboard
               </button>
-              {savedReports.length > 0 && (
-                <button type="button" onClick={() => { localStorage.removeItem(HISTORY_KEY); setSavedReports([]); }} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors">
-                  <Trash2 className="h-3.5 w-3.5" /> Tout effacer
-                </button>
-              )}
-            </div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Clock className="h-5 w-5 text-slate-400" /> Historique
-              {savedReports.length > 0 && <span className="text-sm font-normal text-slate-500">({savedReports.length})</span>}
-            </h2>
-            {savedReports.length === 0 ? (
-              <div className="text-center py-16">
-                <Clock className="h-12 w-12 text-slate-700 mx-auto mb-4" />
-                <p className="text-sm text-slate-500">Aucun rapport envoyé</p>
-                <p className="text-xs text-slate-600 mt-1">Vos rapports apparaîtront ici</p>
+
+              {/* Chantier header */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 animate-fadeIn">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-lg font-bold text-white">{statusEmoji[c.status]} {c.name}</h2>
+                  {c.score !== null && <span className={`text-xl font-bold ${c.score >= 7 ? "text-emerald-400" : c.score >= 5 ? "text-amber-400" : "text-red-400"}`}>{c.score}/10</span>}
+                </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.status === "green" ? "bg-emerald-500/15 text-emerald-400" : c.status === "orange" ? "bg-amber-500/15 text-amber-400" : c.status === "red" ? "bg-red-500/15 text-red-400" : "bg-slate-700 text-slate-400"}`}>
+                    {statusLabel[c.status]}
+                  </span>
+                  <span className="text-xs text-slate-500">{c.allReports.length} rapport{c.allReports.length > 1 ? "s" : ""}</span>
+                </div>
+                {c.latestReport.report.synthese && (
+                  <p className="text-sm italic text-slate-300 mb-3">&laquo;&nbsp;{c.latestReport.report.synthese}&nbsp;&raquo;</p>
+                )}
+                {c.alertes.length > 0 && (
+                  <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 mb-3">
+                    <p className="text-xs font-semibold text-red-400 mb-1.5">⚠️ Alertes actives</p>
+                    {c.alertes.map((a, i) => <p key={i} className="text-xs text-red-300">• {a}</p>)}
+                  </div>
+                )}
+                {c.topProblems.length > 0 && (
+                  <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3">
+                    <p className="text-xs font-semibold text-amber-400 mb-1.5">🔧 Problèmes en cours</p>
+                    {c.topProblems.map((p, i) => <p key={i} className="text-xs text-amber-300">• {p}</p>)}
+                  </div>
+                )}
               </div>
-            ) : (
+
+              {/* Reports timeline */}
+              <h3 className="text-sm font-semibold text-slate-400 flex items-center gap-2">
+                <Clock className="h-4 w-4" /> Historique des rapports
+              </h3>
               <div className="space-y-2">
-                {savedReports.map((sr) => {
+                {c.allReports.map((sr) => {
                   const sl = getStatusLevel(sr.report.statut_global);
-                  const emoji: Record<string, string> = { green: "🟢", orange: "🟠", red: "🔴", none: "📋" };
                   return (
                     <button
                       type="button"
                       key={sr.id}
-                      onClick={() => setHistoryDetail(sr)}
-                      className="w-full rounded-xl border border-slate-800 bg-slate-900/60 p-3.5 text-left transition-all hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
+                      onClick={() => setDashboardReportDetail(sr)}
+                      className="w-full rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-left transition-all hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-white truncate mr-2">{emoji[sl]} {sr.report.lieu_chantier || "Rapport"}</span>
-                        <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium text-white">{statusEmoji[sl]} {new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}</span>
+                        <div className="flex items-center gap-2">
                           {sr.report.score && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
-                          <ChevronRight className="h-4 w-4 text-slate-600" />
+                          <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
                         </div>
                       </div>
-                      {sr.report.synthese && <p className="text-xs text-slate-400 line-clamp-1 mb-1">{sr.report.synthese}</p>}
-                      <p className="text-[11px] text-slate-600">{new Date(sr.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                      {sr.report.synthese && <p className="text-[11px] text-slate-500 line-clamp-1">{sr.report.synthese}</p>}
                     </button>
                   );
                 })}
               </div>
+            </div>
+          </main>
+        );
+      }
+
+      // ── Main dashboard view ──
+      return (
+        <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
+          <div className="mx-auto w-full max-w-md space-y-5">
+
+            {/* Header */}
+            <div className="flex items-center justify-between animate-fadeIn">
+              <div>
+                <h1 className="text-xl font-bold text-white">Dashboard</h1>
+                <p className="text-xs text-slate-500">Vos chantiers en temps réel</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {savedReports.length > 0 && (
+                  <button type="button" onClick={() => { localStorage.removeItem(HISTORY_KEY); setSavedReports([]); }} className="p-2 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                <button type="button" onClick={() => { setStage("idle"); setDashboardChantier(null); setDashboardReportDetail(null); }} className="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                  <Mic className="h-3.5 w-3.5" /> Nouveau
+                </button>
+              </div>
+            </div>
+
+            {/* Empty state */}
+            {savedReports.length === 0 ? (
+              <div className="text-center py-20 animate-fadeIn">
+                <BarChart3 className="h-16 w-16 text-slate-800 mx-auto mb-5" />
+                <p className="text-base font-medium text-slate-400 mb-2">Aucun rapport</p>
+                <p className="text-sm text-slate-600 mb-8">Dictez votre premier rapport vocal pour commencer</p>
+                <button type="button" onClick={() => setStage("idle")} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white hover:bg-red-500 transition-colors">
+                  <Mic className="h-4 w-4" /> Créer un rapport
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-3 gap-2.5 animate-fadeInUp stagger-1">
+                  <div className="rounded-xl bg-slate-900/60 border border-slate-800 p-3 text-center">
+                    <p className="text-2xl font-bold text-white">{total}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Chantier{total > 1 ? "s" : ""}</p>
+                  </div>
+                  <div className="rounded-xl bg-emerald-500/8 border border-emerald-500/20 p-3 text-center">
+                    <p className="text-2xl font-bold text-emerald-400">{okCount}</p>
+                    <p className="text-[10px] text-emerald-500/70 mt-0.5">🟢 OK</p>
+                  </div>
+                  <div className={`rounded-xl p-3 text-center ${critCount > 0 ? "bg-red-500/8 border border-red-500/20" : "bg-amber-500/8 border border-amber-500/20"}`}>
+                    <p className={`text-2xl font-bold ${critCount > 0 ? "text-red-400" : "text-amber-400"}`}>{warnCount}</p>
+                    <p className={`text-[10px] mt-0.5 ${critCount > 0 ? "text-red-500/70" : "text-amber-500/70"}`}>{critCount > 0 ? "🔴" : "🟠"} À surveiller</p>
+                  </div>
+                </div>
+
+                {/* Attention banner */}
+                {needAttention.length > 0 && (
+                  <div className={`rounded-xl p-3 flex items-center gap-3 animate-fadeInUp stagger-2 ${critCount > 0 ? "bg-red-500/10 border border-red-500/25" : "bg-amber-500/10 border border-amber-500/25"}`}>
+                    <Bell className={`h-5 w-5 shrink-0 ${critCount > 0 ? "text-red-400" : "text-amber-400"}`} />
+                    <p className={`text-sm font-medium ${critCount > 0 ? "text-red-300" : "text-amber-300"}`}>
+                      {needAttention.length} chantier{needAttention.length > 1 ? "s" : ""} nécessite{needAttention.length > 1 ? "nt" : ""} votre attention
+                    </p>
+                  </div>
+                )}
+
+                {/* Alertes prioritaires */}
+                {allAlertes.length > 0 && (
+                  <div className="space-y-1.5 animate-fadeInUp stagger-3">
+                    <h2 className="text-xs font-semibold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Alertes prioritaires
+                    </h2>
+                    <div className="rounded-xl bg-red-500/6 border border-red-500/15 divide-y divide-red-500/10">
+                      {allAlertes.slice(0, 5).map((a, i) => (
+                        <div key={i} className="px-3 py-2.5 flex items-start gap-2.5">
+                          <span className="text-xs mt-0.5">{a.status === "red" ? "🔴" : "⚠️"}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-red-300/90">{a.text}</p>
+                            <p className="text-[10px] text-red-400/50 mt-0.5">{a.chantier}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chantiers list */}
+                <div className="space-y-1.5 animate-fadeInUp stagger-4">
+                  <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" /> Mes chantiers
+                  </h2>
+                  <div className="space-y-2">
+                    {chantiers.map((c) => (
+                      <button
+                        type="button"
+                        key={c.name}
+                        onClick={() => setDashboardChantier(c)}
+                        className="w-full rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-left transition-all hover:border-slate-700 hover:bg-slate-800/50 active:scale-[0.98]"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-sm font-semibold text-white truncate mr-3">{statusEmoji[c.status]} {c.name}</span>
+                          <div className="flex items-center gap-2.5 shrink-0">
+                            {c.score !== null && (
+                              <span className={`text-sm font-bold ${c.score >= 7 ? "text-emerald-400" : c.score >= 5 ? "text-amber-400" : "text-red-400"}`}>{c.score}/10</span>
+                            )}
+                            <ChevronRight className="h-4 w-4 text-slate-600" />
+                          </div>
+                        </div>
+                        {c.latestReport.report.synthese && (
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-2">{c.latestReport.report.synthese}</p>
+                        )}
+                        {c.topProblems.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {c.topProblems.slice(0, 2).map((p, i) => (
+                              <span key={i} className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-400 border border-amber-500/20">⚠ {p.length > 40 ? p.slice(0, 40) + "…" : p}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 text-[10px] text-slate-600">
+                          <span>{c.allReports.length} rapport{c.allReports.length > 1 ? "s" : ""}</span>
+                          <span>·</span>
+                          <span>{new Date(c.latestReport.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rapports récents */}
+                <div className="space-y-1.5 animate-fadeInUp stagger-5">
+                  <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" /> Rapports récents
+                  </h2>
+                  <div className="space-y-1.5">
+                    {savedReports.slice(0, 5).map((sr) => {
+                      const sl = getStatusLevel(sr.report.statut_global);
+                      return (
+                        <button
+                          type="button"
+                          key={sr.id}
+                          onClick={() => setDashboardReportDetail(sr)}
+                          className="w-full rounded-lg border border-slate-800/60 bg-slate-900/30 px-3 py-2.5 text-left transition-all hover:bg-slate-800/40 active:scale-[0.98] flex items-center gap-3"
+                        >
+                          <span className="text-sm">{statusEmoji[sl]}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-white truncate">{sr.report.lieu_chantier || "Rapport"}</p>
+                            <p className="text-[10px] text-slate-600">{new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                          </div>
+                          {sr.report.score && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
+                          <ChevronRight className="h-3.5 w-3.5 text-slate-700" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </main>
@@ -803,15 +1036,15 @@ export default function Home() {
             )}
           </div>
 
-          {/* History button */}
+          {/* Dashboard button */}
           {savedReports.length > 0 && (
             <button
               type="button"
-              onClick={() => setStage("history")}
+              onClick={() => setStage("dashboard")}
               className="mt-6 flex items-center justify-center gap-2 w-full rounded-xl bg-slate-800/40 border border-slate-700/50 px-4 py-3 text-sm text-slate-400 hover:text-white hover:border-slate-600 transition-all animate-fadeIn stagger-8"
             >
-              <Clock className="h-4 w-4" />
-              Historique
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
               <span className="ml-auto rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-300">{savedReports.length}</span>
             </button>
           )}
