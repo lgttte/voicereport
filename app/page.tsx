@@ -15,8 +15,6 @@ import {
   Mic,
   MapPin,
   CheckCircle,
-  RotateCcw,
-  Sparkles,
   TrendingUp,
   Zap,
   Bell,
@@ -25,8 +23,6 @@ import {
   Trash2,
   BarChart3,
   WifiOff,
-  Search,
-  HardHat,
   CircleDot,
 } from "lucide-react";
 import Chat from "./components/Chat";
@@ -1013,199 +1009,192 @@ export default function Home() {
       };
 
       return (
-        <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center overflow-hidden px-5 py-8">
-          <div className="relative z-10 w-full max-w-md space-y-5 overflow-hidden break-words">
+        <main className="en-body">
+          <div className="en-orb en-orb-1" />
+          <div className="en-orb en-orb-2" />
+          <div className="en-orb en-orb-3" />
 
-            {/* Header */}
-            <div className="text-center animate-fadeIn">
-              <HardHat className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-              <h1 className="text-lg font-bold text-white mb-1">Compléter le rapport</h1>
-              <p className="text-sm text-slate-400">Sélectionnez le chantier en 1 clic</p>
+          <div className="en-wrap">
+
+            {/* Helmet logo */}
+            <div className="en-helmet">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a05" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 18h20" /><path d="M4 18a8 8 0 0 1 16 0" /><path d="M12 2v4" /><path d="M8 6l1 4" /><path d="M16 6l-1 4" />
+              </svg>
             </div>
 
-            {/* ── Chantier selection (required) ── */}
-            <div className="animate-fadeInUp stagger-1">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 block">
-                À quel chantier correspond ce rapport ? *
-              </label>
-              {/* Search input */}
-              <div className="relative mb-2">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  autoFocus
-                  value={selectedChantierObj ? selectedChantierObj.name : enrichChantierSearch}
-                  onChange={(e) => {
-                    setEnrichChantierSearch(e.target.value);
-                    setEnrichSelectedChantier(null);
-                  }}
-                  onFocus={() => {
-                    if (selectedChantierObj) {
-                      setEnrichChantierSearch(selectedChantierObj.name);
-                      setEnrichSelectedChantier(null);
-                    }
-                  }}
-                  placeholder="Rechercher ou créer un chantier..."
-                  className="w-full rounded-xl border border-slate-700/60 bg-slate-900/80 py-3 pl-10 pr-4 text-sm text-white outline-none placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 transition-all"
-                />
+            <h1 className="en-title">Compléter le rapport</h1>
+            <p className="en-subtitle">Sélectionnez le chantier en 1 clic</p>
+
+            {/* ── Chantier (required) ── */}
+            <div className="en-section">
+              <div className="en-label">
+                À quel chantier correspond ce rapport ? <span className="en-req">*</span>
               </div>
 
-              {/* Chantier list — quick tap */}
-              {!selectedChantierObj && (
-                <div className="space-y-1.5 max-h-44 overflow-y-auto">
-                  {filteredChantiers.map((c) => (
-                    <button
-                      type="button"
-                      key={c.id}
-                      onClick={() => { setEnrichSelectedChantier(c.id); setEnrichChantierSearch(""); }}
-                      className="w-full flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-all hover:border-slate-600 hover:bg-slate-800/60 active:scale-[0.98] min-w-0"
-                    >
-                      <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
-                      <span className="text-sm text-white truncate min-w-0">{c.name}</span>
-                    </button>
-                  ))}
-
-                  {/* Create new chantier */}
-                  {isNewChantier && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const entry = addOrUpdateChantier(enrichChantierSearch.trim());
-                        setEnrichSelectedChantier(entry.id);
-                        setChantierList(loadChantiers());
-                        setEnrichChantierSearch("");
+              {!selectedChantierObj ? (
+                <>
+                  <div className="en-search-wrap">
+                    <svg className="en-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={enrichChantierSearch}
+                      onChange={(e) => {
+                        setEnrichChantierSearch(e.target.value);
+                        setEnrichSelectedChantier(null);
                       }}
-                      className="w-full flex items-center gap-3 rounded-xl border border-dashed border-sky-500/40 bg-sky-500/5 px-4 py-3 text-left transition-all hover:border-sky-400 hover:bg-sky-500/10 active:scale-[0.98]"
-                    >
-                      <Plus className="h-4 w-4 text-sky-400 shrink-0" />
-                      <span className="text-sm text-sky-300 truncate min-w-0">Créer &laquo;&nbsp;{enrichChantierSearch.trim()}&nbsp;&raquo;</span>
-                    </button>
-                  )}
+                      placeholder="Rechercher ou créer un chantier..."
+                      className="en-search"
+                    />
+                  </div>
 
-                  {filteredChantiers.length === 0 && !isNewChantier && !enrichChantierSearch && (
-                    <p className="text-sm text-slate-600 text-center py-4">
-                      Tapez le nom du chantier
-                    </p>
-                  )}
-                </div>
-              )}
+                  {/* Chantier list */}
+                  <div className="en-chantier-list">
+                    {filteredChantiers.map((c) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        onClick={() => { setEnrichSelectedChantier(c.id); setEnrichChantierSearch(""); }}
+                        className="en-chantier-item"
+                      >
+                        <MapPin className="en-chantier-pin" />
+                        <span className="en-chantier-name">{c.name}</span>
+                      </button>
+                    ))}
 
-              {/* Selected chantier badge */}
-              {selectedChantierObj && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 min-w-0 overflow-hidden">
-                  <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
-                  <span className="text-sm font-medium text-sky-300 flex-1 truncate min-w-0">{selectedChantierObj.name}</span>
-                  <button type="button" onClick={() => { setEnrichSelectedChantier(null); setEnrichChantierSearch(""); }} className="text-slate-400 hover:text-white">
-                    <X className="h-3.5 w-3.5" />
+                    {isNewChantier && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const entry = addOrUpdateChantier(enrichChantierSearch.trim());
+                          setEnrichSelectedChantier(entry.id);
+                          setChantierList(loadChantiers());
+                          setEnrichChantierSearch("");
+                        }}
+                        className="en-chantier-create"
+                      >
+                        <Plus className="en-chantier-pin" />
+                        <span className="en-chantier-new-name">Créer &laquo;&nbsp;{enrichChantierSearch.trim()}&nbsp;&raquo;</span>
+                      </button>
+                    )}
+
+                    {filteredChantiers.length === 0 && !isNewChantier && !enrichChantierSearch && (
+                      <p className="en-hint">Tapez le nom du chantier</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="en-selected-badge">
+                  <MapPin className="en-chantier-pin" />
+                  <span className="en-selected-name">{selectedChantierObj.name}</span>
+                  <button type="button" onClick={() => { setEnrichSelectedChantier(null); setEnrichChantierSearch(""); }} className="en-selected-clear">
+                    <X className="en-selected-x" />
                   </button>
                 </div>
               )}
             </div>
 
-            {/* ── État global (optional) ── */}
-            <div className="animate-fadeInUp stagger-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Comment s&apos;est passée la journée ?
-              </p>
-              <div className="grid grid-cols-3 gap-2">
+            {/* ── État global ── */}
+            <div className="en-section">
+              <div className="en-label">Comment s&apos;est passée la journée ?</div>
+              <div className="en-options en-cols-3">
                 {([
-                  { key: "fluide" as const,    emoji: "🟢", label: "Fluide" },
-                  { key: "difficile" as const, emoji: "🟠", label: "Difficultés" },
-                  { key: "critique" as const,  emoji: "🔴", label: "Critique" },
-                ]).map(({ key, emoji, label }) => (
+                  { key: "fluide" as const,    dotClass: "en-dot-green", label: "Fluide" },
+                  { key: "difficile" as const, dotClass: "en-dot-orange", label: "Difficultés" },
+                  { key: "critique" as const,  dotClass: "en-dot-red", label: "Critique" },
+                ]).map(({ key, dotClass, label }) => (
                   <button
                     type="button"
                     key={key}
                     onClick={() => setEnrichEtat(enrichEtat === key ? null : key)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all active:scale-[0.95] ${
-                      enrichEtat === key
-                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
-                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
-                    }`}
+                    className={`en-opt${enrichEtat === key ? " selected" : ""}`}
                   >
-                    <span className="text-xl">{emoji}</span>
-                    <span className={`text-xs font-medium ${enrichEtat === key ? "text-white" : "text-slate-400"}`}>{label}</span>
+                    <span className={`en-dot ${dotClass}`} />
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* ── Urgence (optional) ── */}
-            <div className="animate-fadeInUp stagger-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Quelque chose d&apos;urgent ?
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {([
-                  { val: true,  emoji: "🚨", label: "Oui, urgent" },
-                  { val: false, emoji: "👌", label: "Non" },
-                ]).map(({ val, emoji, label }) => (
-                  <button
-                    type="button"
-                    key={String(val)}
-                    onClick={() => setEnrichUrgent(enrichUrgent === val ? null : val)}
-                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all active:scale-[0.95] ${
-                      enrichUrgent === val
-                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
-                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
-                    }`}
-                  >
-                    <span className="text-lg">{emoji}</span>
-                    <span className={`text-sm font-medium ${enrichUrgent === val ? "text-white" : "text-slate-400"}`}>{label}</span>
-                  </button>
-                ))}
+            {/* ── Urgence ── */}
+            <div className="en-section">
+              <div className="en-label">Quelque chose d&apos;urgent ?</div>
+              <div className="en-options en-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setEnrichUrgent(enrichUrgent === true ? null : true)}
+                  className={`en-opt en-opt-row${enrichUrgent === true ? " selected" : ""}`}
+                >
+                  <span className="en-ico-box en-ico-urgent">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fda4af" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /></svg>
+                  </span>
+                  <span>Oui, urgent</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnrichUrgent(enrichUrgent === false ? null : false)}
+                  className={`en-opt en-opt-row${enrichUrgent === false ? " selected" : ""}`}
+                >
+                  <span className="en-ico-box en-ico-no">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </span>
+                  <span>Non</span>
+                </button>
               </div>
             </div>
 
-            {/* ── Type de journée (optional) ── */}
-            <div className="animate-fadeInUp stagger-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Type de journée
-              </p>
-              <div className="grid grid-cols-2 gap-2">
+            {/* ── Type de journée ── */}
+            <div className="en-section">
+              <div className="en-label">Type de journée</div>
+              <div className="en-options en-cols-2">
                 {([
-                  { key: "normal" as const,   emoji: "✅", label: "Normal" },
-                  { key: "retard" as const,   emoji: "⏳", label: "Retard" },
-                  { key: "blocage" as const,  emoji: "🛑", label: "Blocage" },
-                  { key: "incident" as const, emoji: "⚠️",  label: "Incident" },
-                ]).map(({ key, emoji, label }) => (
+                  { key: "normal" as const,   icoClass: "en-ico-normal",   stroke: "#5eead4", icon: <polyline points="20 6 9 17 4 12" />, label: "Normal" },
+                  { key: "retard" as const,   icoClass: "en-ico-delay",    stroke: "#fcd34d", icon: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>, label: "Retard" },
+                  { key: "blocage" as const,  icoClass: "en-ico-block",    stroke: "#f9a8d4", icon: <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>, label: "Blocage" },
+                  { key: "incident" as const, icoClass: "en-ico-incident", stroke: "#fdba74", icon: <><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>, label: "Incident" },
+                ]).map(({ key, icoClass, stroke, icon, label }) => (
                   <button
                     type="button"
                     key={key}
                     onClick={() => setEnrichTypeJournee(enrichTypeJournee === key ? null : key)}
-                    className={`flex items-center justify-center gap-2 rounded-xl border p-3 transition-all active:scale-[0.95] ${
-                      enrichTypeJournee === key
-                        ? "border-sky-500/50 bg-sky-500/10 ring-1 ring-sky-500/30"
-                        : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
-                    }`}
+                    className={`en-opt en-opt-row${enrichTypeJournee === key ? " selected" : ""}`}
                   >
-                    <span className="text-lg">{emoji}</span>
-                    <span className={`text-sm font-medium ${enrichTypeJournee === key ? "text-white" : "text-slate-400"}`}>{label}</span>
+                    <span className={`en-ico-box ${icoClass}`}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
+                    </span>
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* ── Generate button ── */}
-            <div className="pt-2 space-y-3 animate-fadeInUp stagger-5">
-              <button
-                type="button"
-                onClick={handleEnrichSubmit}
-                disabled={!canProceed}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-4 text-base font-semibold text-black transition-all duration-200 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="h-4.5 w-4.5" />
-                Générer le rapport
-              </button>
-              <button
-                type="button"
-                onClick={() => setStage("preview")}
-                className="flex w-full items-center justify-center gap-2 text-sm font-light text-slate-400 transition hover:text-white"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Retour
-              </button>
-            </div>
+            {/* ── CTA ── */}
+            <button
+              type="button"
+              onClick={handleEnrichSubmit}
+              className={`en-cta${!canProceed ? " disabled" : ""}`}
+              disabled={!canProceed}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="#050811" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="9" y1="13" x2="15" y2="13" />
+                <line x1="9" y1="17" x2="15" y2="17" />
+              </svg>
+              Générer le rapport
+              <span className="en-cta-arrow">→</span>
+            </button>
+
+            {/* Back */}
+            <button
+              type="button"
+              onClick={() => setStage("preview")}
+              className="en-back"
+            >
+              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+              Retour
+            </button>
 
           </div>
         </main>
