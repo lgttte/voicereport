@@ -1252,11 +1252,6 @@ export default function Home() {
         <div className="rc-orb rc-orb-2" />
         <div className="rc-orb rc-orb-3" />
         <div className="rc-wrap">
-          {/* Badge */}
-          <div className="rc-badge">
-            <span className="rc-badge-dot" />
-            30 secondes suffisent
-          </div>
 
           {/* Title */}
           <h1 className="rc-title">Nouveau rapport</h1>
