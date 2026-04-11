@@ -796,7 +796,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   // ══════════════════════════════════════════════════════════════════════
   // PAGE 2+ \u2014 Plan d'action, Impacts, Photos, Certification
   // ══════════════════════════════════════════════════════════════════════
-  const hasActions = aprevoir.length > 0;
+  const hasActions = planAction.length > 0;
   const hasImpacts = impacts.length > 0;
   const hasPhotos = compressedPhotos.length > 0;
   const hasAlertesForP2 = alertes.length > 0;
@@ -843,7 +843,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // Actions imm\u00e9diates
   if (hasActions) {
-    y = drawActionCard(aprevoir, y);
+    y = drawActionCard(planAction, y);
   } else {
     // Even without actions, show a clean card
     if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
