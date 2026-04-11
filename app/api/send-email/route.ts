@@ -62,6 +62,9 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     meteo?: string;
     equipe?: string;
     avancement?: string;
+    score?: number;
+    synthese?: string;
+    alertes?: string[];
     travaux_realises?: string[] | string;
     problemes_rencontres?: string[] | string;
     materiel_manquant?: string[] | string;
@@ -113,6 +116,9 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const avancement   = optStr(reportData.avancement);
   const statutGlobal = sanitizeEmoji(reportData.statut_global || "");
   const impacts   = toArray((reportData as Record<string, unknown>).impacts).map(sanitizeEmoji);
+  const score     = typeof reportData.score === "number" ? reportData.score : null;
+  const synthese  = reportData.synthese ? sanitizeEmoji(reportData.synthese) : null;
+  const alertes   = toArray((reportData as Record<string, unknown>).alertes).map(sanitizeEmoji);
 
   console.log(`[PDF GENERATION] ========== DEBUT DE LA GENERATION ==========`);
   console.log(`[PDF GENERATION] Nombre d'images: ${photos.length}`);
@@ -212,20 +218,43 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       const s = statutGlobal.toLowerCase();
       let pillColor: RGB = GREEN;
       let pillText = "En cours";
-      if (s.includes("bon") || s.includes("fluide")) { pillColor = GREEN; pillText = "Bon avancement"; }
+      if (s.includes("bon") || s.includes("fluide")) { pillColor = GREEN; pillText = "Bon d\u00e9roulement"; }
       else if (s.includes("difficulte") || s.includes("quelques")) { pillColor = AMBER; pillText = "Difficult\u00e9s"; }
       else if (s.includes("critique") || s.includes("probleme")) { pillColor = RED; pillText = "Critique"; }
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
-      const pillW = doc.getTextWidth(pillText) + 14;
+      const pillTextW = doc.getTextWidth(pillText);
+      const dotSpace = 8; // dot (3) + gap (5)
+      const pillPadH = 5;
+      const pillW = pillTextW + dotSpace + pillPadH * 2;
+      const pillH = 8;
       const pillX = PW - MR - pillW;
       const pillY = 8;
       doc.setFillColor(...pillColor);
-      doc.roundedRect(pillX, pillY, pillW, 7, 3.5, 3.5, "F");
+      doc.roundedRect(pillX, pillY, pillW, pillH, pillH / 2, pillH / 2, "F");
+      // White dot centered vertically
       doc.setFillColor(...WHITE);
-      doc.circle(pillX + 5, pillY + 3.5, 1.2, "F");
+      doc.circle(pillX + pillPadH + 1.5, pillY + pillH / 2, 1.2, "F");
+      // Text centered vertically
       doc.setTextColor(...WHITE);
-      doc.text(pillText, pillX + 9, pillY + 5.2);
+      doc.text(pillText, pillX + pillPadH + dotSpace, pillY + pillH / 2 + 1.8);
+    }
+
+    // Score badge (under status pill)
+    if (score !== null) {
+      const scoreStr = score + "/10";
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      const scoreBadgeW = doc.getTextWidth(scoreStr) + 10;
+      const scoreBadgeX = PW - MR - scoreBadgeW;
+      const scoreBadgeY = statutGlobal ? 19 : 8;
+      let scoreBgColor: RGB = GREEN;
+      if (score < 5) scoreBgColor = RED;
+      else if (score < 7) scoreBgColor = AMBER;
+      doc.setFillColor(...scoreBgColor);
+      doc.roundedRect(scoreBadgeX, scoreBadgeY, scoreBadgeW, 7, 3.5, 3.5, "F");
+      doc.setTextColor(...WHITE);
+      doc.text(scoreStr, scoreBadgeX + scoreBadgeW / 2, scoreBadgeY + 5.2, { align: "center" });
     }
 
     // Brand line
@@ -301,13 +330,9 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     const COL_W = (CW - GAP * 2) / 3;
 
     const kpis: { label: string; value: string; border: RGB }[] = [];
-    kpis.push({ label: "Travaux", value: String(travaux.length), border: NAVY_700 });
-    kpis.push({ label: "Mat\u00e9riel", value: String(materiel.length), border: AMBER });
-    if (equipe) {
-      kpis.push({ label: "\u00c9quipe", value: equipe, border: GREEN });
-    } else {
-      kpis.push({ label: "Probl\u00e8mes", value: String(problemes.length), border: RED });
-    }
+    kpis.push({ label: "Travaux", value: String(travaux.length), border: GREEN });
+    kpis.push({ label: "Probl\u00e8mes", value: String(problemes.length), border: problemes.length > 0 ? RED : GREEN });
+    kpis.push({ label: "Mat\u00e9riel manquant", value: String(materiel.length), border: materiel.length > 0 ? AMBER : GREEN });
 
     for (let i = 0; i < 3; i++) {
       const kx = ML + i * (COL_W + GAP);
@@ -338,7 +363,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   }
 
   // ── Section block with items list ──────────────────────────────────
-  function drawSection(title: string, items: string[], y: number, sType: "travaux" | "problemes" | "materiel"): number {
+  function drawSection(title: string, items: string[], y: number, sType: "travaux" | "problemes" | "materiel" | "aprevoir"): number {
     const TITLE_H = 10;
     const LINE_H = 5;
     const ITEM_PAD = 3;
@@ -346,11 +371,10 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     const GAP = 6;
     const FS = 9;
 
-    // Empty probl\u00e8mes -> green "Aucun incident" card
-    if (items.length === 0 && sType === "problemes") {
-      return drawNoIssuesCard(y);
+    // Empty section: show "Rien \u00e0 signaler" card
+    if (items.length === 0) {
+      return drawEmptyCard(title, y, sType);
     }
-    if (items.length === 0) return y;
 
     // Pre-compute item text wrapping
     doc.setFontSize(FS);
@@ -452,18 +476,33 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     return y + GAP;
   }
 
-  // ── "Aucun incident" card (green soft) ─────────────────────────────
-  function drawNoIssuesCard(y: number): number {
-    const CARD_H = 14;
+  // ── "Rien \u00e0 signaler" card for empty sections ─────────────────────
+  function drawEmptyCard(title: string, y: number, sType: string): number {
+    const CARD_H = 16;
     if (y + CARD_H + 6 > PAGE_BOTTOM) { y = newPage(); }
 
+    // Section title
+    let bulletColor: RGB;
+    if (sType === "travaux") bulletColor = GREEN;
+    else if (sType === "problemes") bulletColor = RED;
+    else if (sType === "materiel") bulletColor = AMBER_DK;
+    else bulletColor = NAVY_700;
+
+    drawDiamond(ML + 2.5, y + 5, 2, 2.5, bulletColor);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text(title, ML + 8, y + 7);
+    y += 12;
+
+    // Green soft card
     doc.setFillColor(...GREEN_SOFT);
     doc.roundedRect(ML, y, CW, CARD_H, 2, 2, "F");
     doc.setDrawColor(...GREEN);
     doc.setLineWidth(0.3);
     doc.roundedRect(ML, y, CW, CARD_H, 2, 2, "S");
 
-    // Checkmark drawn with lines
+    // Checkmark
     const cx = ML + 7;
     const cy = y + CARD_H / 2;
     doc.setDrawColor(...GREEN);
@@ -474,7 +513,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...GREEN);
-    doc.text("Aucun incident signal\u00e9", ML + 14, y + CARD_H / 2 + 1.5);
+    doc.text("Rien \u00e0 signaler", ML + 14, y + CARD_H / 2 + 1.5);
 
     return y + CARD_H + 6;
   }
@@ -678,51 +717,189 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   let y = drawPage1Hero() + 8;
   drawFooter(pageNum);
 
+  // Synth\u00e8se (quote block)
+  if (synthese) {
+    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(ML, y, CW, 1, 0, 0, "F"); // top accent
+    const synthLines = doc.splitTextToSize(synthese, CW - 16) as string[];
+    const synthH = synthLines.length * 5 + 10;
+    doc.setFillColor(245, 247, 250);
+    doc.roundedRect(ML, y, CW, synthH, 2, 2, "F");
+    doc.setFillColor(...NAVY_700);
+    doc.rect(ML, y, 3, synthH, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...DGRAY);
+    let sy = y + 7;
+    for (const line of synthLines) {
+      doc.text(line, ML + 10, sy);
+      sy += 5;
+    }
+    y += synthH + 6;
+  }
+
   // KPI Grid
   y = drawKPIGrid(y);
 
-  // Sections (travaux, probl\u00e8mes, mat\u00e9riel on page 1)
+  // Alertes banner
+  if (alertes.length > 0) {
+    if (y + 16 > PAGE_BOTTOM) { y = newPage(); }
+    const alertH = alertes.length * 5 + 12;
+    doc.setFillColor(...RED_SOFT);
+    doc.roundedRect(ML, y, CW, alertH, 2, 2, "F");
+    doc.setFillColor(...RED);
+    doc.rect(ML, y, 3, alertH, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...RED);
+    doc.text("ALERTES", ML + 8, y + 7);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DGRAY);
+    let ay = y + 13;
+    for (const a of alertes) {
+      const aLines = doc.splitTextToSize(a, CW - 16) as string[];
+      doc.text(aLines[0] || a, ML + 8, ay);
+      ay += 5;
+    }
+    y += alertH + 6;
+  }
+
+  // All 4 sections (always shown, even when empty)
   y = drawSection("Travaux r\u00e9alis\u00e9s", travaux, y, "travaux");
   y = drawSection("Probl\u00e8mes rencontr\u00e9s", problemes, y, "problemes");
   y = drawSection("Mat\u00e9riel manquant", materiel, y, "materiel");
+  y = drawSection("\u00c0 pr\u00e9voir", aprevoir, y, "aprevoir");
 
   // ══════════════════════════════════════════════════════════════════════
-  // PAGE 2+ \u2014 Actions, Impacts, Photos, Certification
+  // PAGE 2+ \u2014 Plan d'action, Impacts, Photos, Certification
   // ══════════════════════════════════════════════════════════════════════
-  const needsPage2 = aprevoir.length > 0 || impacts.length > 0 || compressedPhotos.length > 0;
+  const hasActions = aprevoir.length > 0;
+  const hasImpacts = impacts.length > 0;
+  const hasPhotos = compressedPhotos.length > 0;
+  const hasAlertesForP2 = alertes.length > 0;
 
-  if (needsPage2) {
-    doc.addPage();
-    pageNum++;
-    y = drawContinuationHero(
-      "\u2014  Suite \u00b7 Photos & actions",
-      "Plan d'action & visuels du chantier"
-    ) + 8;
-    drawFooter(pageNum);
+  // Always generate page 2 for plan d'action
+  doc.addPage();
+  pageNum++;
+  y = drawContinuationHero(
+    "\u2014  PLAN D'ACTION \u00b7 BTP",
+    "Plan d'action & recommandations"
+  ) + 8;
+  drawFooter(pageNum);
 
-    // Actions prioritaires (formerly "\u00c0 pr\u00e9voir")
-    y = drawActionCard(aprevoir, y);
-
-    // Impacts
-    y = drawImpactSection(y);
-
-    // Photos
-    if (compressedPhotos.length > 0) {
-      drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...DGRAY);
-      doc.text("Visuels du chantier", ML + 8, y + 7);
-      y += 14;
-      y = drawPhotoGrid(y);
-    }
-
-    // Certification
-    y = drawCertBlock(y);
-  } else {
-    // Certification on page 1
-    y = drawCertBlock(y);
+  // Score recap on page 2
+  if (score !== null) {
+    if (y + 18 > PAGE_BOTTOM) { y = newPage(); }
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
+    doc.setDrawColor(...BGRAY);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text("Note du chantier :", ML + 8, y + 10);
+    let scoreColor: RGB = GREEN;
+    if (score < 5) scoreColor = RED;
+    else if (score < 7) scoreColor = AMBER;
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...scoreColor);
+    doc.text(score + " / 10", ML + 52, y + 11);
+    // Status label
+    let noteLabel = "Excellent";
+    if (score < 5) noteLabel = "Critique - Actions urgentes requises";
+    else if (score < 7) noteLabel = "Correct - Am\u00e9liorations n\u00e9cessaires";
+    else if (score < 9) noteLabel = "Bon d\u00e9roulement";
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MGRAY);
+    doc.text(noteLabel, ML + 80, y + 11);
+    y += 22;
   }
+
+  // Actions imm\u00e9diates
+  if (hasActions) {
+    y = drawActionCard(aprevoir, y);
+  } else {
+    // Even without actions, show a clean card
+    if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
+    doc.setFillColor(...GREEN_SOFT);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...GREEN);
+    doc.text("Aucune action prioritaire requise", ML + 14, y + 10);
+    y += 22;
+  }
+
+  // Conseils de gestion pour le patron
+  if (y + 40 > PAGE_BOTTOM) { y = newPage(); }
+  drawDiamond(ML + 2.5, y + 5, 2, 2.5, NAVY_700);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...DGRAY);
+  doc.text("Recommandations de gestion", ML + 8, y + 7);
+  y += 12;
+
+  // Build dynamic recommendations
+  const recommendations: string[] = [];
+  if (problemes.length > 0) recommendations.push("Planifier une r\u00e9union d'\u00e9quipe pour traiter les " + problemes.length + " probl\u00e8me(s) identifi\u00e9(s)");
+  if (materiel.length > 0) recommendations.push("Passer commande du mat\u00e9riel manquant (" + materiel.length + " \u00e9l\u00e9ment(s)) pour \u00e9viter les retards");
+  if (hasAlertesForP2) recommendations.push("V\u00e9rifier les alertes signal\u00e9es et prendre les mesures correctives");
+  if (score !== null && score < 7) recommendations.push("Note en dessous de 7/10 : identifier les causes principales et am\u00e9liorer les conditions de travail");
+  if (travaux.length > 0) recommendations.push("Valider les " + travaux.length + " t\u00e2che(s) r\u00e9alis\u00e9e(s) et mettre \u00e0 jour le planning");
+  if (recommendations.length === 0) recommendations.push("Chantier en bon \u00e9tat - poursuivre dans les conditions actuelles");
+
+  for (let i = 0; i < recommendations.length; i++) {
+    doc.setFontSize(9);
+    const recLines = doc.splitTextToSize(recommendations[i], CW - 18) as string[];
+    const recH = recLines.length * 5 + 6;
+    if (y + recH > PAGE_BOTTOM) { y = newPage(); }
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(ML, y, CW, recH, 1.5, 1.5, "F");
+    // Numbered circle
+    doc.setFillColor(...NAVY_700);
+    doc.circle(ML + 7, y + recH / 2, 3, "F");
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text(String(i + 1), ML + 7, y + recH / 2 + 1.5, { align: "center" });
+    // Text
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...DGRAY);
+    let ry = y + 5;
+    for (const line of recLines) {
+      doc.text(line, ML + 14, ry + 2);
+      ry += 5;
+    }
+    y += recH + 3;
+  }
+  y += 4;
+
+  // Impacts
+  y = drawImpactSection(y);
+
+  // Photos
+  if (hasPhotos) {
+    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
+    drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text("Visuels du chantier", ML + 8, y + 7);
+    y += 14;
+    y = drawPhotoGrid(y);
+  }
+
+  // Certification
+  y = drawCertBlock(y);
 
   // ── Convert to buffer
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
