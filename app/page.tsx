@@ -1371,6 +1371,7 @@ export default function Home() {
   const problemesItems = report?.problemes_rencontres || [];
   const materielItems = report?.materiel_manquant || [];
   const aPrevoirItems = report?.a_prevoir || [];
+  const alertes = report?.alertes || [];
   const chantierName = report?.lieu_chantier || "";
 
   return (
