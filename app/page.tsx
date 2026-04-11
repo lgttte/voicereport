@@ -121,8 +121,6 @@ const OFFLINE_QUEUE_KEY = "voicereport_offline_queue";
 const ENCOURAGEMENT_PHRASES = [
   "Parlez naturellement, comme \u00e0 votre patron",
   "Votre patron recevra le rapport en 10 secondes",
-  "Plus de 500 rapports envoy\u00e9s cette semaine",
-  "Utilis\u00e9 sur 47 chantiers en France",
   "30 secondes pour un rapport complet",
 ];
 

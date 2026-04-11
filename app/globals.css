@@ -377,8 +377,9 @@ main {
 .rc-categories {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
   width: 100%;
+  opacity: 0.7;
 }
 .rc-cat {
   position: relative;
@@ -386,14 +387,13 @@ main {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 10px;
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  min-height: 78px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  cursor: default;
   overflow: hidden;
   text-align: left;
   font-family: inherit;
@@ -431,9 +431,9 @@ main {
 
 /* Cat icon */
 .rc-cat-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
@@ -442,12 +442,9 @@ main {
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  transition: all 0.25s;
-  align-self: flex-start;
-  margin-top: 2px;
 }
 .rc-cat:hover .rc-cat-icon { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); }
-.rc-cat-icon svg { width: 18px; height: 18px; stroke: #c4cce0; fill: none; stroke-width: 2; transition: stroke 0.25s; }
+.rc-cat-icon svg { width: 14px; height: 14px; stroke: #8892b0; fill: none; stroke-width: 2; }
 .rc-cat:hover .rc-cat-icon svg { stroke: #fff; }
 
 /* Cat text */
@@ -457,8 +454,8 @@ main {
   z-index: 1;
   min-width: 0;
 }
-.rc-cat-text strong { display: block; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; letter-spacing: -0.2px; }
-.rc-cat-text span { display: block; font-size: 11.5px; color: #8892b0; font-weight: 500; line-height: 1.35; word-break: normal; overflow-wrap: break-word; }
+.rc-cat-text strong { display: block; font-size: 12px; font-weight: 600; color: #c4cce0; letter-spacing: -0.2px; }
+.rc-cat-text span { display: block; font-size: 10px; color: #5a6481; font-weight: 500; line-height: 1.3; }
 
 /* Cat mini-mic */
 .rc-cat-mini-mic {
