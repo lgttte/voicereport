@@ -2,10 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
-  Mail,
   Plus,
-  Edit3,
-  Send,
   ShieldAlert,
   Package,
   CalendarDays,
@@ -15,15 +12,8 @@ import {
   Mic,
   MapPin,
   CheckCircle,
-  TrendingUp,
-  Zap,
-  Bell,
-  Clock,
-  ChevronRight,
-  Trash2,
   BarChart3,
   WifiOff,
-  CircleDot,
 } from "lucide-react";
 import Chat from "./components/Chat";
 import UserSetup from "./components/UserSetup";
@@ -1386,147 +1376,243 @@ export default function Home() {
 
   // Vue 2 : Validation — Mobile-first, single column
   const scoreValue = report?.score;
-  const scoreColor = scoreValue && scoreValue >= 7 ? "text-emerald-400" : scoreValue && scoreValue >= 5 ? "text-amber-400" : "text-red-400";
-  const scoreBg = scoreValue && scoreValue >= 7 ? "bg-emerald-500/10 border-emerald-500/30" : scoreValue && scoreValue >= 5 ? "bg-amber-500/10 border-amber-500/30" : "bg-red-500/10 border-red-500/30";
-  const alertes = report?.alertes || [];
-  const impacts = report?.impacts || [];
+  const circumference = 2 * Math.PI * 30; // ≈ 188.5
+  const scoreOffset = circumference * (1 - (scoreValue || 0) / 10);
+  const scoreGradient: [string, string] =
+    scoreValue && scoreValue >= 7 ? ["#86efac", "#22c55e"]
+    : scoreValue && scoreValue >= 5 ? ["#fde047", "#f59e0b"]
+    : ["#fda4af", "#e11d48"];
+  const scoreTextColor =
+    scoreValue && scoreValue >= 7 ? "#4ade80"
+    : scoreValue && scoreValue >= 5 ? "#fbbf24"
+    : "#f87171";
+  const scoreGlowColor =
+    scoreValue && scoreValue >= 7 ? "rgba(74,222,128,0.5)"
+    : scoreValue && scoreValue >= 5 ? "rgba(251,191,36,0.5)"
+    : "rgba(248,113,113,0.5)";
+
+  // Hero color scheme based on status
+  const heroColors =
+    statutLevel === "green"  ? { bg: "rgba(74,222,128,0.10)", bgEnd: "rgba(20,184,100,0.04)", border: "rgba(74,222,128,0.22)", glow: "rgba(74,222,128,0.15)", pillBg: "rgba(74,222,128,0.15)", pillBorder: "rgba(74,222,128,0.3)", pillText: "#86efac", dot: "#4ade80", quoteBorder: "rgba(74,222,128,0.4)", lineGrad: "rgba(74,222,128,0.5)", blobGrad: "rgba(74,222,128,0.18)" }
+    : statutLevel === "orange" ? { bg: "rgba(251,191,36,0.10)", bgEnd: "rgba(184,140,20,0.04)", border: "rgba(251,191,36,0.22)", glow: "rgba(251,191,36,0.15)", pillBg: "rgba(251,191,36,0.15)", pillBorder: "rgba(251,191,36,0.3)", pillText: "#fde68a", dot: "#fbbf24", quoteBorder: "rgba(251,191,36,0.4)", lineGrad: "rgba(251,191,36,0.5)", blobGrad: "rgba(251,191,36,0.18)" }
+    : statutLevel === "red"    ? { bg: "rgba(248,113,113,0.10)", bgEnd: "rgba(184,50,50,0.04)", border: "rgba(248,113,113,0.22)", glow: "rgba(248,113,113,0.15)", pillBg: "rgba(248,113,113,0.15)", pillBorder: "rgba(248,113,113,0.3)", pillText: "#fca5a5", dot: "#f87171", quoteBorder: "rgba(248,113,113,0.4)", lineGrad: "rgba(248,113,113,0.5)", blobGrad: "rgba(248,113,113,0.18)" }
+    : { bg: "rgba(74,222,128,0.10)", bgEnd: "rgba(20,184,100,0.04)", border: "rgba(74,222,128,0.22)", glow: "rgba(74,222,128,0.15)", pillBg: "rgba(74,222,128,0.15)", pillBorder: "rgba(74,222,128,0.3)", pillText: "#86efac", dot: "#4ade80", quoteBorder: "rgba(74,222,128,0.4)", lineGrad: "rgba(74,222,128,0.5)", blobGrad: "rgba(74,222,128,0.18)" };
+
+  // Format date: "10 avril 2026"
+  const reportDate = new Date();
+  const frenchMonths = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  const day = reportDate.getDate();
+  const dayStr = day === 1 ? "1er" : String(day);
+  const formattedDate = `${dayStr} ${frenchMonths[reportDate.getMonth()]} ${reportDate.getFullYear()}`;
+  const formattedTime = reportDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  // Rubrique data
+  const travauxItems = report?.travaux_realises || [];
+  const problemesItems = report?.problemes_rencontres || [];
+  const materielItems = report?.materiel_manquant || [];
+  const aPrevoirItems = report?.a_prevoir || [];
+  const chantierName = report?.lieu_chantier || "";
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6 overflow-x-hidden">
-      <div className="mx-auto w-full max-w-md space-y-4 break-words">
+    <main className="rv-body">
+      <div className="rv-orb rv-orb-1" />
+      <div className="rv-orb rv-orb-2" />
 
-        {/* ── TOP BAR: Status + Score ── */}
-        <div className="flex items-stretch gap-3 animate-scaleIn overflow-hidden">
-          {/* Status badge */}
-          <div className={`flex-1 min-w-0 rounded-2xl border-2 px-4 py-3.5 text-center ${statutStyles[statutLevel]}`}>
-            <p className="text-base font-bold leading-tight truncate">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
+      <div className="rv-wrap">
+
+        {/* BREADCRUMB */}
+        <div className="rv-crumb">
+          <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3"/></svg>
+          Rapports
+          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          <span className="rv-crumb-now">Récapitulatif</span>
+        </div>
+
+        {/* HERO STATUS */}
+        <div
+          className="rv-hero"
+          style={{
+            background: `linear-gradient(135deg, ${heroColors.bg} 0%, ${heroColors.bgEnd} 60%, rgba(20,24,42,0.4) 100%)`,
+            border: `1px solid ${heroColors.border}`,
+            boxShadow: `0 20px 50px -20px ${heroColors.glow}`,
+          }}
+        >
+          <div className="rv-hero-line" style={{ background: `linear-gradient(90deg, transparent, ${heroColors.lineGrad}, transparent)` }} />
+          <div className="rv-hero-blob" style={{ background: `radial-gradient(circle, ${heroColors.blobGrad}, transparent 70%)` }} />
+
+          <div className="rv-hero-top">
+            <div className="rv-hero-left">
+              <div className="rv-hero-pill" style={{ background: heroColors.pillBg, borderColor: heroColors.pillBorder, color: heroColors.pillText }}>
+                <span className="rv-hero-dot" style={{ background: heroColors.dot, boxShadow: `0 0 8px ${heroColors.dot}` }} />
+                {statutLabel[statutLevel]}
+              </div>
+              <h1 className="rv-hero-title">Rapport du<br />{formattedDate}</h1>
+              <div className="rv-hero-meta">
+                {chantierName && (
+                  <>
+                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    {chantierName}
+                    <span className="rv-meta-sep">·</span>
+                  </>
+                )}
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {formattedTime}
+              </div>
+            </div>
+            {scoreValue != null && (
+              <div className="rv-score-ring">
+                <svg viewBox="0 0 70 70">
+                  <defs>
+                    <linearGradient id="rvScoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={scoreGradient[0]} />
+                      <stop offset="100%" stopColor={scoreGradient[1]} />
+                    </linearGradient>
+                  </defs>
+                  <circle className="rv-score-track" cx="35" cy="35" r="30" />
+                  <circle
+                    className="rv-score-progress"
+                    cx="35" cy="35" r="30"
+                    style={{ strokeDashoffset: scoreOffset, filter: `drop-shadow(0 0 8px ${scoreGlowColor})` }}
+                  />
+                </svg>
+                <div className="rv-score-num">
+                  <strong style={{ color: scoreTextColor }}>{scoreValue}</strong>
+                  <span style={{ color: `${scoreTextColor}99` }}>/ 10</span>
+                </div>
+              </div>
+            )}
           </div>
-          {/* Score */}
-          {scoreValue && (
-            <div className={`flex flex-col items-center justify-center rounded-2xl border-2 px-5 py-3.5 ${scoreBg}`}>
-              <p className={`text-2xl font-bold leading-none ${scoreColor}`}>{scoreValue}</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">/10</p>
+
+          {report?.synthese && (
+            <div className="rv-hero-quote" style={{ borderLeftColor: heroColors.quoteBorder }}>
+              &laquo;&nbsp;{report.synthese}&nbsp;&raquo;
             </div>
           )}
         </div>
 
-        {/* ── AI Synthesis ── */}
-        {report?.synthese && (
-          <p className="text-sm italic text-slate-300 text-center leading-relaxed px-2 animate-fadeIn stagger-1">
-            &laquo;&nbsp;{report.synthese}&nbsp;&raquo;
-          </p>
-        )}
-
-        {/* ── Alerts banner ── */}
+        {/* Alerts banner */}
         {alertes.length > 0 && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3.5 space-y-2 animate-fadeInUp stagger-1">
-            <div className="flex items-center gap-2 mb-1">
-              <Bell className="h-3.5 w-3.5 text-red-400" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-red-400">Alertes</p>
+          <div className="rv-alerts">
+            <div className="rv-alerts-header">
+              <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              Alertes
             </div>
             {alertes.map((a, i) => (
-              <p key={i} className="text-sm text-red-200 leading-relaxed break-words">{a}</p>
+              <p key={i} className="rv-alerts-text">{a}</p>
             ))}
           </div>
         )}
 
         {/* Message feedback */}
         {message && (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm leading-relaxed text-emerald-200">
-            {message}
-          </div>
+          <div className="rv-message">{message}</div>
         )}
 
-        {/* Lieu + meta */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 animate-fadeIn stagger-1 overflow-hidden">
-          {report?.lieu_chantier && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-400 min-w-0 max-w-full">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{report.lieu_chantier}</span>
-            </div>
-          )}
-          {report?.equipe && (
-            <span className="text-xs text-slate-500 truncate">• {report.equipe}</span>
-          )}
-          {report?.avancement && (
-            <span className="text-xs text-slate-500 truncate">• {report.avancement}</span>
-          )}
+        {/* RUBRIQUES */}
+        <div className="rv-section-label">
+          <span />
+          Détail du rapport
         </div>
 
-        {/* Cartes du rapport / Édition */}
         {isEditing ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Mode édition
-            </p>
+          <div className="rv-edit-box">
+            <p className="rv-edit-label">Mode édition</p>
             <textarea
               value={reportText}
               onChange={(event) => setReportText(event.target.value)}
-              className="w-full resize-none rounded-lg border border-slate-700/60 bg-slate-950 p-3 text-sm leading-relaxed text-slate-200 outline-none transition focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
+              className="rv-edit-textarea"
               rows={12}
               placeholder="Modifiez le contenu du rapport..."
             />
           </div>
         ) : (
-          <div className="space-y-3">
-            {reportSections.map((section, idx) => {
-              const hasItems = section.items.length > 0;
-              const cardStyle = sectionCardStyles[section.title] || { border: "border-l-slate-600", icon: "text-slate-500" };
-              const isProblemes = section.title === "Problèmes rencontrés";
-              return (
-                <div
-                  key={section.title}
-                  className={`rounded-xl border border-slate-800 border-l-[3px] ${cardStyle.border} bg-slate-900/50 p-4 animate-fadeInUp stagger-${idx + 2}`}
-                >
-                  <div className="mb-2 flex items-center gap-2.5">
-                    <section.icon className={`h-4 w-4 shrink-0 ${cardStyle.icon}`} />
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      {section.title}
-                    </p>
-                  </div>
-                  {hasItems ? (
-                    <ul className="space-y-1.5 overflow-hidden">
-                      {section.items.map((item, i) => {
-                        if (isProblemes) {
-                          const { level, text } = parseSeverity(item);
-                          return (
-                            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200 break-words overflow-hidden">
-                              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                                level === "critique" ? "bg-red-500" : level === "attention" ? "bg-amber-500" : "bg-slate-500"
-                              }`} />
-                              <span className="min-w-0">{text}</span>
-                            </li>
-                          );
-                        }
-                        return (
-                          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200 break-words overflow-hidden">
-                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500" />
-                            <span className="min-w-0">{item}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-slate-500 italic">Rien à signaler</p>
-                  )}
+          <div className="rv-rubriques">
+            {/* Travaux réalisés */}
+            <div className="rv-rubrique green">
+              <div className="rv-rub-icon">
+                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <div className="rv-rub-body">
+                <div className="rv-rub-title">Travaux réalisés</div>
+                <div className={`rv-rub-content${travauxItems.length === 0 ? " empty" : ""}`}>
+                  {travauxItems.length > 0
+                    ? (travauxItems.length === 1 ? travauxItems[0] : `${travauxItems.length} tâches enregistrées`)
+                    : "Aucune tâche enregistrée"}
                 </div>
-              );
-            })}
+              </div>
+              <div className="rv-rub-badge">{travauxItems.length}</div>
+            </div>
+
+            {/* Problèmes rencontrés */}
+            <div className="rv-rubrique red">
+              <div className="rv-rub-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div className="rv-rub-body">
+                <div className="rv-rub-title">Problèmes rencontrés</div>
+                <div className={`rv-rub-content${problemesItems.length === 0 ? " empty" : ""}`}>
+                  {problemesItems.length > 0
+                    ? (problemesItems.length === 1 ? parseSeverity(problemesItems[0]).text : `${problemesItems.length} incidents signalés`)
+                    : "Aucun incident signalé"}
+                </div>
+              </div>
+              <div className="rv-rub-badge">{problemesItems.length}</div>
+            </div>
+
+            {/* Matériel manquant */}
+            <div className="rv-rubrique amber">
+              <div className="rv-rub-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>
+              <div className="rv-rub-body">
+                <div className="rv-rub-title">Matériel manquant</div>
+                <div className={`rv-rub-content${materielItems.length === 0 ? " empty" : ""}`}>
+                  {materielItems.length > 0
+                    ? (materielItems.length === 1 ? materielItems[0] : `${materielItems.length} manques déclarés`)
+                    : "Aucun manque déclaré"}
+                </div>
+              </div>
+              <div className="rv-rub-badge">{materielItems.length}</div>
+            </div>
+
+            {/* À prévoir */}
+            <div className="rv-rubrique cyan">
+              <div className="rv-rub-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
+              </div>
+              <div className="rv-rub-body">
+                <div className="rv-rub-title">À prévoir</div>
+                <div className={`rv-rub-content${aPrevoirItems.length === 0 ? " empty" : ""}`}>
+                  {aPrevoirItems.length > 0
+                    ? (aPrevoirItems.length === 1 ? aPrevoirItems[0] : `${aPrevoirItems.length} actions planifiées`)
+                    : "Aucune action planifiée"}
+                </div>
+              </div>
+              <div className="rv-rub-badge">{aPrevoirItems.length}</div>
+            </div>
           </div>
         )}
 
+        {/* ANNEXES */}
+        <div className="rv-section-label">
+          <span />
+          Annexes &amp; envoi
+        </div>
+
         {/* Photos */}
-        <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 animate-fadeInUp stagger-6">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Photos chantier
-            </p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 transition hover:text-white"
-            >
-              <Plus className="h-3.5 w-3.5" />
+        <div className="rv-photo-card">
+          <div className="rv-photo-head">
+            <div className="rv-photo-head-left">
+              <div className="rv-photo-head-icon">
+                <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              </div>
+              <div className="rv-photo-head-text">
+                <strong>Photos chantier</strong>
+                <span>{photoPreviews.length > 0 ? `${photoPreviews.length} photo${photoPreviews.length > 1 ? "s" : ""} ajoutée${photoPreviews.length > 1 ? "s" : ""}` : "Aucune photo ajoutée"}</span>
+              </div>
+            </div>
+            <button type="button" className="rv-add-btn" onClick={() => fileInputRef.current?.click()}>
+              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Ajouter
             </button>
           </div>
@@ -1538,128 +1624,92 @@ export default function Home() {
             className="hidden"
             onChange={(event) => handlePhotoSelection(event.target.files)}
           />
-
           {photoPreviews.length > 0 ? (
-            <div className="space-y-3">
+            <div className="rv-photo-grid">
               {photoPreviews.map((photo, index) => (
-                <div key={photo.previewUrl} className="space-y-2">
-                  <div className="relative overflow-hidden rounded-lg border border-slate-700/50">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.previewUrl}
-                      alt={`Photo ${index + 1}`}
-                      className="h-40 w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePhoto(index)}
-                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-950/70 text-slate-300 transition hover:bg-red-500 hover:text-white"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    value={photoLegends[index] || ""}
-                    onChange={(e) => {
-                      setPhotoLegends((current) => {
-                        const next = [...current];
-                        next[index] = e.target.value;
-                        return next;
-                      });
-                    }}
-                    placeholder="Légende de la photo..."
-                    className="w-full rounded-lg border border-slate-700/60 bg-slate-950 px-3 py-2 text-xs text-slate-300 outline-none placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
-                  />
+                <div key={photo.previewUrl} className="rv-photo-thumb">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={photo.previewUrl} alt={`Photo ${index + 1}`} />
+                  <button type="button" className="rv-photo-remove" onClick={() => handleRemovePhoto(index)}>
+                    <X className="rv-photo-remove-x" />
+                  </button>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-600">Aucune photo.</p>
-          )}
-        </div>
-
-        {/* Email — simplified */}
-        <div className="animate-fadeInUp stagger-7">
-          {recipientEmail && !showEmailEdit ? (
-            <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Mail className="h-4 w-4 shrink-0 text-slate-500" />
-                <span className="text-sm text-slate-200 truncate">{recipientEmail}</span>
+            <div className="rv-photo-empty">
+              <div className="rv-photo-empty-ico">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowEmailEdit(true)}
-                className="text-xs text-slate-500 hover:text-white transition shrink-0 ml-3"
-              >
-                Modifier
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label
-                htmlFor="email-input"
-                className="text-xs font-semibold uppercase tracking-wider text-slate-400"
-              >
-                Destinataire
-              </label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
-                <input
-                  id="email-input"
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(event) => setRecipientEmail(event.target.value)}
-                  onBlur={() => { if (recipientEmail) setShowEmailEdit(false); }}
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-3 pl-10 pr-4 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30"
-                  placeholder="patron@entreprise.fr"
-                  autoFocus={showEmailEdit}
-                />
-              </div>
+              <span>Appuyez sur Ajouter pour joindre des photos</span>
             </div>
           )}
         </div>
 
-        {/* Bouton principal */}
-        <button
-          type="button"
-          onClick={handleSendReport}
-          disabled={isSending}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 animate-fadeInUp stagger-8"
-        >
-          {isSending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+        {/* Email */}
+        <div className="rv-email-card">
+          <div className="rv-email-ico">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          {!showEmailEdit ? (
+            <>
+              <div className="rv-email-info">
+                <div className="rv-email-lbl">Destinataire</div>
+                <div className="rv-email-val">{recipientEmail || "Non défini"}</div>
+              </div>
+              <button type="button" className="rv-email-edit" onClick={() => setShowEmailEdit(true)}>Modifier</button>
+            </>
           ) : (
-            <Send className="h-4 w-4" />
+            <div className="rv-email-input-wrap">
+              <input
+                type="email"
+                value={recipientEmail}
+                onChange={(event) => setRecipientEmail(event.target.value)}
+                onBlur={() => { if (recipientEmail) setShowEmailEdit(false); }}
+                className="rv-email-input"
+                placeholder="patron@entreprise.fr"
+                autoFocus
+              />
+            </div>
           )}
-          <span className="truncate">{isSending ? "Envoi en cours..." : recipientEmail ? `Envoyer à ${recipientEmail.split("@")[0]}@…` : "Valider & Envoyer"}</span>
-        </button>
+        </div>
 
-        {/* Boutons secondaires */}
-        <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
-          <button
-            type="button"
-            onClick={() => setIsEditing((current) => !current)}
-            className="inline-flex items-center gap-1.5 transition hover:text-white"
-          >
-            <Edit3 className="h-3.5 w-3.5" />
+        {/* Secondary buttons */}
+        <div className="rv-secondary">
+          <button type="button" onClick={() => setIsEditing((current) => !current)} className="rv-secondary-btn">
+            <svg viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
             {isEditing ? "Aperçu" : "Modifier"}
           </button>
-          <span className="h-3 w-px bg-slate-800" />
-          <button
-            type="button"
-            onClick={resetFlow}
-            className="inline-flex items-center gap-1.5 transition hover:text-white"
-          >
-            <Mic className="h-3.5 w-3.5" />
+          <span className="rv-secondary-sep" />
+          <button type="button" onClick={resetFlow} className="rv-secondary-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5 9a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
             Recommencer
           </button>
         </div>
 
       </div>
 
-      {/* Chat flottant */}
-      <Chat />
+      {/* CTA STICKY */}
+      <div className="rv-cta-bar">
+        <div className="rv-cta-inner">
+          <button
+            type="button"
+            className={`rv-cta${isSending ? " rv-cta-disabled" : ""}`}
+            onClick={handleSendReport}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <span className="rv-cta-spinner" />
+            ) : (
+              <span className="rv-cta-ico">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </span>
+            )}
+            {isSending ? "Envoi en cours…" : "Envoyer le rapport"}
+          </button>
+        </div>
+      </div>
+
     </main>
   );
 }
