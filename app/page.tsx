@@ -849,67 +849,11 @@ export default function Home() {
 
           <div className="vf-wrap">
 
-            {/* Badge */}
-            <div className="vf-badge">
-              <span className="vf-badge-check">✓</span>
-              Enregistrement réussi
-            </div>
-
             {/* Title */}
-            <h1 className="vf-title">Vérifiez votre enregistrement</h1>
-            <p className="vf-subtitle">Réécoutez avant de générer le rapport</p>
+            <h1 className="vf-title">Votre rapport est pr\u00eat</h1>
+            <p className="vf-subtitle">G\u00e9n\u00e9r\u00e9 automatiquement \u00e0 partir de votre vocal</p>
 
-            {/* Player */}
-            <div className="vf-player">
-              <button
-                type="button"
-                className="vf-play-btn"
-                aria-label={isPlaying ? "Pause" : "Lecture"}
-                onClick={togglePlayback}
-              >
-                {isPlaying ? (
-                  <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                )}
-              </button>
-
-              {/* Waveform */}
-              <div className="vf-waveform">
-                {Array.from({ length: BARS }).map((_, i) => {
-                  const t = i / BARS;
-                  const h = 25 + Math.sin(t * 12) * 30 + Math.sin(t * 27) * 20 + ((Math.sin(i * 137.5) + 1) * 15);
-                  const height = Math.max(15, Math.min(100, h));
-                  const played = totalDur > 0 && (i / BARS) < (playbackTime / totalDur);
-                  return (
-                    <div
-                      key={i}
-                      className={`vf-bar${played ? " played" : ""}`}
-                      style={{ height: `${height}%` }}
-                      onClick={() => handleWaveSeek(i)}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Timer */}
-              <div className="vf-timer">
-                <span className="vf-timer-current">{formatTime(Math.floor(playbackTime))}</span>
-                <span className="vf-timer-sep">/</span>
-                <span>{formatTime(Math.floor(totalDur))}</span>
-              </div>
-            </div>
-
-            {/* Info row */}
-            <div className="vf-info-row">
-              <div className="vf-info-left">
-                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
-                Audio capturé · {totalDurSec} seconde{totalDurSec !== 1 ? "s" : ""}
-              </div>
-
-            </div>
-
-            {/* CTA */}
+            {/* CTA — primary */}
             <button
               type="button"
               className="vf-cta"
@@ -927,19 +871,29 @@ export default function Home() {
                   <line x1="9" y1="17" x2="15" y2="17" />
                 </svg>
               </span>
-              Générer mon rapport
-              <span className="vf-cta-arrow">→</span>
+              Voir mon rapport
+              <span className="vf-cta-arrow">\u2192</span>
             </button>
 
-            {/* Restart */}
-            <button
-              type="button"
-              className="vf-restart"
-              onClick={resetFlow}
-            >
-              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
-              Recommencer l&apos;enregistrement
-            </button>
+            {/* Secondary actions */}
+            <div className="vf-secondary-row">
+              <button
+                type="button"
+                className="vf-restart"
+                onClick={togglePlayback}
+              >
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                R\u00e9\u00e9couter
+              </button>
+              <button
+                type="button"
+                className="vf-restart"
+                onClick={resetFlow}
+              >
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+                Recommencer
+              </button>
+            </div>
           </div>
         </main>
       );
@@ -1175,32 +1129,23 @@ export default function Home() {
       );
     }
 
-    // ── Processing screen ──
+    // ── Processing screen (AI transition) ──
     if (stage === "processing") {
       return (
         <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-          <div className="flex flex-col items-center gap-6 animate-fadeIn">
-            <div className="flex h-28 w-28 items-center justify-center rounded-full animate-scaleIn">
-              <Loader2 className="h-12 w-12 text-sky-400 animate-spin" />
+          <div className="flex flex-col items-center gap-8 animate-fadeIn">
+            <div className="relative flex h-24 w-24 items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-sky-500/20 animate-ping" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-2 rounded-full bg-sky-500/10 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.3s' }} />
+              <Loader2 className="h-10 w-10 text-sky-400 animate-spin" />
             </div>
             <div className="text-center space-y-2">
-              <p className="text-base font-medium text-white animate-fadeInUp stagger-2">
-                Analyse en cours...
+              <p className="text-lg font-semibold text-white animate-fadeInUp">
+                Cr\u00e9ation du rapport\u2026
               </p>
-              <div className="space-y-1.5 animate-fadeInUp stagger-3">
-                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-sky-400 animate-pulse" />
-                  Transcription vocale
-                </p>
-                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-slate-600" />
-                  Structuration du rapport
-                </p>
-                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-slate-600" />
-                  Analyse des risques
-                </p>
-              </div>
+              <p className="text-sm text-slate-400 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
+                Analyse de votre journ\u00e9e en cours
+              </p>
             </div>
           </div>
         </main>
@@ -1218,7 +1163,7 @@ export default function Home() {
             {/* Recording badge */}
             <div className="rc-badge">
               <span className="rc-badge-dot rc-badge-dot-rec" />
-              En écoute...
+              Enregistrement\u2026
             </div>
 
             {/* Timer */}
@@ -1234,12 +1179,12 @@ export default function Home() {
             {/* Stop mic button */}
             <div className="rc-mic-area rc-mic-area-rec">
               <div className="rc-mic-glow rc-mic-glow-rec" />
-              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arrêter l'enregistrement">
+              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arr\u00eater l'enregistrement">
                 <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
               </button>
             </div>
 
-            <p className="rc-instruction">Appuyez pour terminer</p>
+            <p className="rc-instruction">Vous pourrez v\u00e9rifier ensuite</p>
           </div>
         </div>
       );
@@ -1254,11 +1199,12 @@ export default function Home() {
         <div className="rc-wrap">
           {/* Title */}
           <h1 className="rc-title">Nouveau rapport</h1>
+          <p className="rc-subtitle">Parlez comme \u00e0 votre patron : travaux, probl\u00e8mes, mat\u00e9riel</p>
 
           {/* Mic button */}
           <div className="rc-mic-area">
             <div className="rc-mic-glow" />
-            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Démarrer l'enregistrement">
+            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="D\u00e9marrer l'enregistrement">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="2" width="6" height="12" rx="3" />
                 <path d="M5 10a7 7 0 0 0 14 0" />
@@ -1268,10 +1214,7 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Instruction phrase */}
-          <p className="rc-instruction">
-            Décrivez les travaux réalisés, les problèmes rencontrés, le matériel manquant et ce qui est à prévoir.
-          </p>
+          <p className="rc-instruction">Appuyez pour parler</p>
 
           {/* Offline queue banner */}
           {offlineQueue.length > 0 && (
@@ -1284,7 +1227,7 @@ export default function Home() {
                   onClick={() => window.dispatchEvent(new Event("online"))}
                   className="text-[10px] text-amber-400 font-semibold hover:text-amber-300"
                 >
-                  Réessayer
+                  R\u00e9essayer
                 </button>
               )}
             </div>

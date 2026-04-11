@@ -1059,6 +1059,11 @@ main {
 }
 .vf-restart:hover svg { transform: rotate(-180deg); }
 
+.vf-secondary-row {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+}
+
 @media (max-width: 380px) {
   .vf-title { font-size: 24px; }
   .vf-player { padding: 12px 12px; gap: 8px; }
