@@ -1276,6 +1276,9 @@ export default function Home() {
             <span key={encourageIdx} className="rc-stat-text">{ENCOURAGEMENT_PHRASES[encourageIdx]}</span>
           </div>
 
+          {/* Category hint label */}
+          <p className="rc-cat-hint">Voici ce que vous pouvez mentionner :</p>
+
           {/* Category hint cards */}
           <div className="rc-categories">
             {([

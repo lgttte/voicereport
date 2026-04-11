@@ -243,8 +243,8 @@ main {
 .rc-mic-area::after {
   content: '';
   position: absolute;
-  width: 200px;
-  height: 200px;
+  width: 230px;
+  height: 230px;
   border-radius: 50%;
   border: 1.5px solid rgba(255, 56, 56, 0.25);
   animation: rc-ripple 3s ease-out infinite;
@@ -287,8 +287,8 @@ main {
 /* Mic button */
 .rc-mic {
   position: relative;
-  width: 140px;
-  height: 140px;
+  width: 170px;
+  height: 170px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #ff5757 0%, #ff3838 40%, #d61f1f 100%);
   border: none;
@@ -325,8 +325,8 @@ main {
 }
 .rc-mic:active { transform: scale(0.97); }
 .rc-mic svg {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
 }
 
@@ -371,6 +371,16 @@ main {
   background: #4ade80;
   box-shadow: 0 0 6px #4ade80;
   animation: rc-pulse 2s infinite;
+}
+
+/* Category hint */
+.rc-cat-hint {
+  font-size: 13px;
+  color: #8892b0;
+  font-weight: 500;
+  letter-spacing: -0.1px;
+  margin-bottom: 10px;
+  margin-top: 8px;
 }
 
 /* Category cards */
@@ -499,9 +509,9 @@ main {
 
 @media (max-width: 380px) {
   .rc-title { font-size: 28px; }
-  .rc-mic { width: 120px; height: 120px; }
-  .rc-mic svg { width: 48px; height: 48px; }
-  .rc-mic-area::before, .rc-mic-area::after { width: 170px; height: 170px; }
+  .rc-mic { width: 140px; height: 140px; }
+  .rc-mic svg { width: 54px; height: 54px; }
+  .rc-mic-area::before, .rc-mic-area::after { width: 190px; height: 190px; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
