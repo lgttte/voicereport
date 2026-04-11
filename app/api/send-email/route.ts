@@ -54,7 +54,9 @@ async function compressImage(file: File): Promise<Buffer> {
  * Fonction principale de génération du PDF — design professionnel BTP
  */
 async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], photoLegends: string[]): Promise<Buffer> {
-    // Pour compatibilité avec le reste du code (recommandations)
+  // ...existing code...
+  // (déclaration déplacée plus bas)
+    // ...existing code...
     const alertes = toArray((reportData as Record<string, unknown>).alertes).map(sanitizeEmoji);
   // ── Parse the JSON report safely
   type ReportData = {
