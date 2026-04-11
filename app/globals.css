@@ -526,8 +526,8 @@ main {
   padding: 24px 20px;
   position: relative;
   background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255, 77, 77, 0.18), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 85% 30%, rgba(255, 122, 61, 0.10), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59, 130, 246, 0.15), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 30%, rgba(99, 102, 241, 0.10), transparent 60%),
     radial-gradient(ellipse 70% 50% at 15% 70%, rgba(80, 60, 200, 0.10), transparent 60%),
     linear-gradient(180deg, #06070d 0%, #0a0d1c 100%);
   overflow-x: hidden;
@@ -556,7 +556,7 @@ main {
   animation: ob-float 12s ease-in-out infinite;
 }
 .ob-orb-1 { width: 380px; height: 380px; background: #3b82f6; top: -120px; left: 50%; --ob-tx: -50%; transform: translateX(-50%); }
-.ob-orb-2 { width: 280px; height: 280px; background: #ff7a3d; bottom: -80px; right: -60px; animation-delay: -4s; }
+.ob-orb-2 { width: 280px; height: 280px; background: #6366f1; bottom: -80px; right: -60px; animation-delay: -4s; }
 .ob-orb-3 { width: 240px; height: 240px; background: #5b3dff; bottom: 10%; left: -80px; animation-delay: -8s; }
 @keyframes ob-float {
   0%, 100% { transform: translateY(0) translateX(var(--ob-tx, 0)); }
@@ -1360,27 +1360,27 @@ main {
 
 /* ── hero ── */
 .rv-hero {
-  border-radius: 22px;
-  padding: 22px 22px 20px;
-  margin-bottom: 18px;
+  border-radius: 18px;
+  padding: 14px 16px 12px;
+  margin-bottom: 14px;
   position: relative; overflow: hidden;
 }
 .rv-hero-line {
   position: absolute; top: 0; left: 0; right: 0; height: 1px;
 }
 .rv-hero-blob {
-  position: absolute; top: -60px; right: -60px; width: 180px; height: 180px;
+  position: absolute; top: -60px; right: -60px; width: 120px; height: 120px;
   filter: blur(40px); pointer-events: none;
 }
 .rv-hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; position: relative; }
 .rv-hero-left { flex: 1; min-width: 0; }
 .rv-hero-pill {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 5px 12px; border-radius: 100px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 100px;
   border: 1px solid;
-  font-size: 9.5px; font-weight: 800;
+  font-size: 9px; font-weight: 800;
   letter-spacing: 1.2px; text-transform: uppercase;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .rv-hero-dot {
   width: 6px; height: 6px; border-radius: 50%;
