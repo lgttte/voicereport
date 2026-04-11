@@ -97,10 +97,18 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       .replace(/\s{2,}/g, " ")
       .trim();
 
+  // Fusionne Problèmes et Matériel pour "Points Critiques"
   const travaux   = toArray(reportData.travaux_realises).map(sanitizeEmoji);
-  const problemes = toArray(reportData.problemes_rencontres).map(sanitizeEmoji);
-  const materiel  = toArray(reportData.materiel_manquant).map(sanitizeEmoji);
-  const aprevoir  = toArray(reportData.a_prevoir).map(sanitizeEmoji);
+  const problemes = [
+    ...toArray(reportData.problemes_rencontres),
+    ...toArray(reportData.materiel_manquant)
+  ].map(sanitizeEmoji);
+  // Fusionne À prévoir, Alertes et Recommandations pour "Plan d'action & Suite"
+  const planAction = [
+    ...toArray(reportData.a_prevoir),
+    ...toArray((reportData as Record<string, unknown>).alertes),
+    ...(Array.isArray((reportData as Record<string, unknown>).recommandations) ? toArray((reportData as Record<string, unknown>).recommandations) : [])
+  ].map(sanitizeEmoji);
 
   // Optional fields — undefined if not provided (never show placeholders)
   const optStr = (v: unknown): string | undefined => {
@@ -118,7 +126,6 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const impacts   = toArray((reportData as Record<string, unknown>).impacts).map(sanitizeEmoji);
   const score     = typeof reportData.score === "number" ? reportData.score : null;
   const synthese  = reportData.synthese ? sanitizeEmoji(reportData.synthese) : null;
-  const alertes   = toArray((reportData as Record<string, unknown>).alertes).map(sanitizeEmoji);
 
   console.log(`[PDF GENERATION] ========== DEBUT DE LA GENERATION ==========`);
   console.log(`[PDF GENERATION] Nombre d'images: ${photos.length}`);
@@ -180,15 +187,39 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const PAGE_BOTTOM = PH - 16;
 
   // ── Draw footer on current page ────────────────────────────────────
+  // Footer minimal (réf + date, en bas à droite)
   function drawFooter(page: number) {
-    doc.setDrawColor(...BGRAY);
-    doc.setLineWidth(0.3);
-    doc.line(ML, PH - 14, PW - MR, PH - 14);
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MGRAY);
-    doc.text("VoiceReport \u2014 Le rapport chantier en 30 secondes", ML, PH - 8);
-    doc.text("Page " + page, PW - MR, PH - 8, { align: "right" });
+    doc.text("Ref. VR-" + Date.now().toString(36).toUpperCase().slice(-6) + "  |  " + today, PW - MR, PH - 8, { align: "right" });
+  }
+  // Résumé visuel (pastilles de couleur, score)
+  function drawSummaryRow(y: number): number {
+    // Pastilles : vert si travaux, rouge si points critiques, gris sinon
+    const CIRCLE_R = 5;
+    let cx = ML + 8;
+    // Travaux réalisés
+    doc.setFillColor(...(travaux.length > 0 ? GREEN : BGRAY));
+    doc.circle(cx, y + CIRCLE_R, CIRCLE_R, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text("Travaux réalisés", cx + 10, y + CIRCLE_R + 2);
+    // Points critiques
+    cx += 70;
+    doc.setFillColor(...(problemes.length > 0 ? RED : BGRAY));
+    doc.circle(cx, y + CIRCLE_R, CIRCLE_R, "F");
+    doc.setTextColor(...DGRAY);
+    doc.text("Incidents & Matériel", cx + 10, y + CIRCLE_R + 2);
+    // Score
+    if (score !== null) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...NAVY_900);
+      doc.text("Note : " + score + "/10", PW - MR - 40, y + CIRCLE_R + 2);
+    }
+    return y + 16;
   }
 
   // ── Draw diamond shape ─────────────────────────────────────────────
@@ -711,66 +742,56 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // PAGE 1 \u2014 Report content
-  // ══════════════════════════════════════════════════════════════════════
+  // PAGE 1 — Vue d'ensemble & Terrain
   pageNum = 1;
   let y = drawPage1Hero() + 8;
   drawFooter(pageNum);
+  // Résumé visuel (pastilles, score)
+  y = drawSummaryRow(y);
+  // Travaux réalisés
+  y = drawSection("Travaux réalisés", travaux, y, "travaux");
+  // Points critiques (fusion Problèmes + Matériel)
+  y = drawSection("Incidents & Matériel", problemes, y, "problemes");
 
-  // Synth\u00e8se (quote block)
-  if (synthese) {
-    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
-    doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, 1, 0, 0, "F"); // top accent
-    const synthLines = doc.splitTextToSize(synthese, CW - 16) as string[];
-    const synthH = synthLines.length * 5 + 10;
-    doc.setFillColor(245, 247, 250);
-    doc.roundedRect(ML, y, CW, synthH, 2, 2, "F");
-    doc.setFillColor(...NAVY_700);
-    doc.rect(ML, y, 3, synthH, "F");
+  // PAGE 2 : Suivi & Visuels
+  doc.addPage();
+  pageNum++;
+  y = drawContinuationHero(
+    "—  SUIVI & VISUELS · BTP",
+    "Plan d'action & Suite"
+  ) + 8;
+  drawFooter(pageNum);
+  // Plan d'action (fusionné)
+  if (planAction.length > 0) {
+    y = drawActionCard(planAction, y);
+  } else {
+    if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
+    doc.setFillColor(...GREEN_SOFT);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
     doc.setFontSize(9);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(...DGRAY);
-    let sy = y + 7;
-    for (const line of synthLines) {
-      doc.text(line, ML + 10, sy);
-      sy += 5;
-    }
-    y += synthH + 6;
-  }
-
-  // KPI Grid
-  y = drawKPIGrid(y);
-
-  // Alertes banner
-  if (alertes.length > 0) {
-    if (y + 16 > PAGE_BOTTOM) { y = newPage(); }
-    const alertH = alertes.length * 5 + 12;
-    doc.setFillColor(...RED_SOFT);
-    doc.roundedRect(ML, y, CW, alertH, 2, 2, "F");
-    doc.setFillColor(...RED);
-    doc.rect(ML, y, 3, alertH, "F");
-    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...RED);
-    doc.text("ALERTES", ML + 8, y + 7);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...DGRAY);
-    let ay = y + 13;
-    for (const a of alertes) {
-      const aLines = doc.splitTextToSize(a, CW - 16) as string[];
-      doc.text(aLines[0] || a, ML + 8, ay);
-      ay += 5;
-    }
-    y += alertH + 6;
+    doc.setTextColor(...GREEN);
+    doc.text("Aucune action prioritaire requise", ML + 14, y + 10);
+    y += 22;
   }
-
-  // All 4 sections (always shown, even when empty)
-  y = drawSection("Travaux r\u00e9alis\u00e9s", travaux, y, "travaux");
-  y = drawSection("Probl\u00e8mes rencontr\u00e9s", problemes, y, "problemes");
-  y = drawSection("Mat\u00e9riel manquant", materiel, y, "materiel");
-  y = drawSection("\u00c0 pr\u00e9voir", aprevoir, y, "aprevoir");
+  // Impacts (inchangé)
+  y = drawImpactSection(y);
+  // Galerie photos
+  if (compressedPhotos.length > 0) {
+    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
+    drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text("Photos du chantier", ML + 8, y + 7);
+    y += 14;
+    y = drawPhotoGrid(y);
+  }
+  // Certification (inchangé)
+  y = drawCertBlock(y);
 
   // ══════════════════════════════════════════════════════════════════════
   // PAGE 2+ \u2014 Plan d'action, Impacts, Photos, Certification
