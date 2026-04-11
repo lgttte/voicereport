@@ -988,27 +988,16 @@ export default function Home() {
           <div className="en-orb en-orb-2" />
           <div className="en-orb en-orb-3" />
 
-          <div className="en-wrap">
+          <div className="en-wrap en-wrap-center">
 
-            {/* Helmet logo */}
-            <div className="en-helmet">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a05" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 18h20" /><path d="M4 18a8 8 0 0 1 16 0" /><path d="M12 2v4" /><path d="M8 6l1 4" /><path d="M16 6l-1 4" />
-              </svg>
-            </div>
-
-            <h1 className="en-title">Compléter le rapport</h1>
-            <p className="en-subtitle">Sélectionnez le chantier en 1 clic</p>
+            <h1 className="en-title">Quel chantier ?</h1>
 
             {/* ── Chantier (required) ── */}
-            <div className="en-section">
-              <div className="en-label">
-                À quel chantier correspond ce rapport ? <span className="en-req">*</span>
-              </div>
+            <div className="en-section en-section-center">
 
               {!selectedChantierObj ? (
                 <>
-                  <div className="en-search-wrap">
+                  <div className="en-search-wrap en-search-big">
                     <svg className="en-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
                     <input
                       type="text"
@@ -1018,7 +1007,7 @@ export default function Home() {
                         setEnrichChantierSearch(e.target.value);
                         setEnrichSelectedChantier(null);
                       }}
-                      placeholder="Rechercher ou créer un chantier..."
+                      placeholder="Nom du chantier..."
                       className="en-search"
                     />
                   </div>
@@ -1059,7 +1048,7 @@ export default function Home() {
                   </div>
                 </>
               ) : (
-                <div className="en-selected-badge">
+                <div className="en-selected-badge en-selected-big">
                   <MapPin className="en-chantier-pin" />
                   <span className="en-selected-name">{selectedChantierObj.name}</span>
                   <button type="button" onClick={() => { setEnrichSelectedChantier(null); setEnrichChantierSearch(""); }} className="en-selected-clear">
@@ -1067,80 +1056,6 @@ export default function Home() {
                   </button>
                 </div>
               )}
-            </div>
-
-            {/* ── État global ── */}
-            <div className="en-section">
-              <div className="en-label">Comment s&apos;est passée la journée ?</div>
-              <div className="en-options en-cols-3">
-                {([
-                  { key: "fluide" as const,    dotClass: "en-dot-green", label: "Fluide" },
-                  { key: "difficile" as const, dotClass: "en-dot-orange", label: "Difficultés" },
-                  { key: "critique" as const,  dotClass: "en-dot-red", label: "Critique" },
-                ]).map(({ key, dotClass, label }) => (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => setEnrichEtat(enrichEtat === key ? null : key)}
-                    className={`en-opt${enrichEtat === key ? " selected" : ""}`}
-                  >
-                    <span className={`en-dot ${dotClass}`} />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Urgence ── */}
-            <div className="en-section">
-              <div className="en-label">Quelque chose d&apos;urgent ?</div>
-              <div className="en-options en-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setEnrichUrgent(enrichUrgent === true ? null : true)}
-                  className={`en-opt en-opt-row${enrichUrgent === true ? " selected" : ""}`}
-                >
-                  <span className="en-ico-box en-ico-urgent">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#fda4af" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 9v4" /><path d="M12 17h.01" /><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /></svg>
-                  </span>
-                  <span>Oui, urgent</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEnrichUrgent(enrichUrgent === false ? null : false)}
-                  className={`en-opt en-opt-row${enrichUrgent === false ? " selected" : ""}`}
-                >
-                  <span className="en-ico-box en-ico-no">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#86efac" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </span>
-                  <span>Non</span>
-                </button>
-              </div>
-            </div>
-
-            {/* ── Type de journée ── */}
-            <div className="en-section">
-              <div className="en-label">Type de journée</div>
-              <div className="en-options en-cols-2">
-                {([
-                  { key: "normal" as const,   icoClass: "en-ico-normal",   stroke: "#5eead4", icon: <polyline points="20 6 9 17 4 12" />, label: "Normal" },
-                  { key: "retard" as const,   icoClass: "en-ico-delay",    stroke: "#fcd34d", icon: <><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>, label: "Retard" },
-                  { key: "blocage" as const,  icoClass: "en-ico-block",    stroke: "#f9a8d4", icon: <><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></>, label: "Blocage" },
-                  { key: "incident" as const, icoClass: "en-ico-incident", stroke: "#fdba74", icon: <><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></>, label: "Incident" },
-                ]).map(({ key, icoClass, stroke, icon, label }) => (
-                  <button
-                    type="button"
-                    key={key}
-                    onClick={() => setEnrichTypeJournee(enrichTypeJournee === key ? null : key)}
-                    className={`en-opt en-opt-row${enrichTypeJournee === key ? " selected" : ""}`}
-                  >
-                    <span className={`en-ico-box ${icoClass}`}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>
-                    </span>
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* ── CTA ── */}

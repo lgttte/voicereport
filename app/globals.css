@@ -1100,21 +1100,15 @@ main {
   width: 100%; max-width: 440px;
   display: flex; flex-direction: column; gap: 28px;
 }
-
-/* ── helmet logo ── */
-.en-helmet {
-  width: 54px; height: 54px; margin: 0 auto;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  display: grid; place-items: center;
-  box-shadow: 0 0 20px rgba(245, 158, 11, .4);
+.en-wrap-center {
+  justify-content: center;
+  min-height: 80vh;
 }
-.en-helmet svg { width: 28px; height: 28px; }
 
 /* ── titles ── */
 .en-title {
-  text-align: center; font-size: 24px; font-weight: 800;
-  color: #fff; letter-spacing: -.3px; margin: -12px 0 0;
+  text-align: center; font-size: 28px; font-weight: 800;
+  color: #fff; letter-spacing: -.3px;
 }
 .en-subtitle {
   text-align: center; font-size: 13px; color: rgba(148,163,184,.8);
@@ -1125,6 +1119,9 @@ main {
 .en-section {
   display: flex; flex-direction: column; gap: 10px;
 }
+.en-section-center {
+  align-items: center;
+}
 .en-label {
   font-size: 11px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: rgba(148,163,184,.7);
@@ -1134,6 +1131,18 @@ main {
 /* ── search input ── */
 .en-search-wrap {
   position: relative;
+  width: 100%;
+}
+.en-search-big {
+  max-width: 100%;
+}
+.en-search-big .en-search {
+  padding: 18px 18px 18px 48px;
+  font-size: 17px;
+  border-radius: 20px;
+}
+.en-search-big .en-search-icon {
+  width: 20px; height: 20px; left: 16px;
 }
 .en-search-icon {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
@@ -1190,6 +1199,14 @@ main {
   border: 1px solid rgba(56,189,248,.25);
   background: rgba(56,189,248,.08);
   backdrop-filter: blur(10px);
+  width: 100%;
+}
+.en-selected-big {
+  padding: 18px 20px;
+  border-radius: 20px;
+}
+.en-selected-big .en-selected-name {
+  font-size: 17px;
 }
 .en-selected-name {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
