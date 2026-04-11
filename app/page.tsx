@@ -1320,52 +1320,36 @@ export default function Home() {
           <div className="rv-hero-blob" style={{ background: `radial-gradient(circle, ${heroColors.blobGrad}, transparent 70%)` }} />
 
           <div className="rv-hero-top">
-            <div className="rv-hero-left">
-              <div className="rv-hero-pill" style={{ background: heroColors.pillBg, borderColor: heroColors.pillBorder, color: heroColors.pillText }}>
-                <span className="rv-hero-dot" style={{ background: heroColors.dot, boxShadow: `0 0 8px ${heroColors.dot}` }} />
-                {statutLabel[statutLevel]}
+            <div className="rv-hero-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div className="rv-hero-pill" style={{ background: heroColors.pillBg, borderColor: heroColors.pillBorder, color: heroColors.pillText, fontSize: 15, padding: '8px 18px', minWidth: 0 }}>
+                Quelques difficultés
               </div>
-              <div className="rv-hero-meta">
-                {chantierName && (
-                  <>
-                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    {chantierName}
-                    <span className="rv-meta-sep">·</span>
-                  </>
-                )}
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                {formattedTime}
-              </div>
-            </div>
-            {scoreValue != null && (
-              <div className="rv-score-ring">
-                <svg viewBox="0 0 70 70">
-                  <defs>
-                    <linearGradient id="rvScoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor={scoreGradient[0]} />
-                      <stop offset="100%" stopColor={scoreGradient[1]} />
-                    </linearGradient>
-                  </defs>
-                  <circle className="rv-score-track" cx="35" cy="35" r="30" />
-                  <circle
-                    className="rv-score-progress"
-                    cx="35" cy="35" r="30"
-                    style={{ strokeDashoffset: scoreOffset, filter: `drop-shadow(0 0 8px ${scoreGlowColor})` }}
-                  />
-                </svg>
-                <div className="rv-score-num">
-                  <strong style={{ color: scoreTextColor }}>{scoreValue}</strong>
-                  <span style={{ color: `${scoreTextColor}99` }}>/ 10</span>
+              {scoreValue != null && (
+                <div className="rv-score-ring" style={{ marginLeft: 12 }}>
+                  <svg viewBox="0 0 70 70">
+                    <defs>
+                      <linearGradient id="rvScoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={scoreGradient[0]} />
+                        <stop offset="100%" stopColor={scoreGradient[1]} />
+                      </linearGradient>
+                    </defs>
+                    <circle className="rv-score-track" cx="35" cy="35" r="30" />
+                    <circle
+                      className="rv-score-progress"
+                      cx="35" cy="35" r="30"
+                      style={{ strokeDashoffset: scoreOffset, filter: `drop-shadow(0 0 8px ${scoreGlowColor})` }}
+                    />
+                  </svg>
+                  <div className="rv-score-num" style={{ fontSize: 18 }}>
+                    <strong style={{ color: scoreTextColor }}>{scoreValue}</strong>
+                    <span style={{ color: `${scoreTextColor}99` }}>/ 10</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {report?.synthese && (
-            <div className="rv-hero-quote" style={{ borderLeftColor: heroColors.quoteBorder }}>
-              &laquo;&nbsp;{report.synthese}&nbsp;&raquo;
-            </div>
-          )}
+          {/* No synthese/quote */}
         </div>
 
         {/* Alerts banner */}
