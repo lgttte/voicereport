@@ -81,6 +81,422 @@ main {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   RECORDING — Premium blue-night mic screen
+   ══════════════════════════════════════════════════════════════════════ */
+.rc-body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px 40px;
+  position: relative;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(40, 60, 120, 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, rgba(60, 80, 160, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 15% 90%, rgba(40, 50, 100, 0.10), transparent 60%),
+    linear-gradient(180deg, #050811 0%, #08101f 100%);
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.rc-body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.025) 1px, transparent 0);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Orbs */
+.rc-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+.rc-orb-1 { width: 380px; height: 380px; background: #2a4480; top: 15%; left: -100px; animation: rc-floatA 18s ease-in-out infinite; }
+.rc-orb-2 { width: 320px; height: 320px; background: #1e3a6f; bottom: 10%; right: -120px; animation: rc-floatB 20s ease-in-out infinite; }
+.rc-orb-3 { width: 220px; height: 220px; background: #3d2a80; top: 5%; right: 10%; animation: rc-floatA 22s ease-in-out infinite reverse; }
+@keyframes rc-floatA { 0%,100% { transform: translate(0, 0); } 50% { transform: translate(15px, -25px); } }
+@keyframes rc-floatB { 0%,100% { transform: translate(0, 0); } 50% { transform: translate(-15px, -20px); } }
+
+/* Container */
+.rc-wrap {
+  width: 100%;
+  max-width: 460px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: rc-fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes rc-fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Badge */
+.rc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 100px;
+  background: rgba(20, 24, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  font-size: 12px;
+  font-weight: 600;
+  color: #c4cce0;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,0.5);
+}
+.rc-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff3838;
+  box-shadow: 0 0 10px #ff3838;
+  animation: rc-pulse 2s infinite;
+  display: inline-block;
+}
+.rc-badge-dot-rec {
+  animation: rc-pulse 1s infinite;
+}
+@keyframes rc-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.9); } }
+
+/* Title & subtitle */
+.rc-title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  background: linear-gradient(180deg, #fff 0%, #b8c1d9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+  text-align: center;
+}
+.rc-subtitle {
+  font-size: 15px;
+  color: #8892b0;
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 48px;
+}
+
+/* Timer (recording) */
+.rc-timer {
+  font-size: 52px;
+  font-weight: 300;
+  font-family: 'SF Mono', 'Fira Mono', 'Roboto Mono', monospace;
+  color: #fff;
+  letter-spacing: 6px;
+  margin-bottom: 24px;
+  text-shadow: 0 0 20px rgba(255,255,255,0.3);
+}
+
+/* Wave bars (recording) */
+.rc-wave {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 40px;
+  margin-bottom: 28px;
+}
+.rc-wave-bar {
+  width: 3px;
+  border-radius: 999px;
+  background: rgba(255, 56, 56, 0.6);
+  animation: rc-soundBar 0.9s ease-in-out infinite;
+}
+@keyframes rc-soundBar {
+  0%, 100% { height: 8px; }
+  25% { height: 24px; }
+  50% { height: 32px; }
+  75% { height: 16px; }
+}
+
+/* Instruction text (recording) */
+.rc-instruction {
+  font-size: 14px;
+  color: #5a6481;
+  font-weight: 500;
+  margin-top: 24px;
+}
+
+/* Mic area */
+.rc-mic-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+}
+.rc-mic-area::before,
+.rc-mic-area::after {
+  content: '';
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 56, 56, 0.25);
+  animation: rc-ripple 3s ease-out infinite;
+  will-change: transform, opacity;
+}
+.rc-mic-area::after {
+  animation-delay: 1.5s;
+}
+/* Faster ripple when recording */
+.rc-mic-area-rec::before,
+.rc-mic-area-rec::after {
+  animation-duration: 1.5s;
+  border-color: rgba(255, 56, 56, 0.4);
+}
+.rc-mic-area-rec::after {
+  animation-delay: 0.75s;
+}
+@keyframes rc-ripple {
+  0% { transform: scale(0.7); opacity: 1; border-color: rgba(255, 56, 56, 0.4); }
+  100% { transform: scale(1.4); opacity: 0; border-color: rgba(255, 56, 56, 0); }
+}
+
+/* Mic glow */
+.rc-mic-glow {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 56, 56, 0.28) 0%, transparent 65%);
+  filter: blur(25px);
+  animation: rc-glowPulse 3s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.rc-mic-glow-rec {
+  background: radial-gradient(circle, rgba(255, 56, 56, 0.45) 0%, transparent 65%);
+  animation-duration: 1.5s;
+}
+@keyframes rc-glowPulse { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+
+/* Mic button */
+.rc-mic {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff5757 0%, #ff3838 40%, #d61f1f 100%);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 25px 60px -15px rgba(255, 56, 56, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset,
+    0 -4px 12px rgba(0, 0, 0, 0.25) inset,
+    0 4px 12px rgba(255, 255, 255, 0.2) inset,
+    0 30px 80px -20px rgba(255, 30, 30, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+.rc-mic::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent 50%);
+  z-index: -1;
+  filter: blur(3px);
+}
+.rc-mic:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 30px 70px -15px rgba(255, 56, 56, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+    0 -4px 12px rgba(0, 0, 0, 0.25) inset,
+    0 4px 12px rgba(255, 255, 255, 0.25) inset,
+    0 35px 90px -20px rgba(255, 30, 30, 0.7);
+}
+.rc-mic:active { transform: scale(0.97); }
+.rc-mic svg {
+  width: 56px;
+  height: 56px;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+/* Stat line */
+.rc-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #8892b0;
+  font-weight: 500;
+  margin-bottom: 36px;
+}
+.rc-stat-text {
+  animation: fadeIn 0.5s ease-out;
+}
+.rc-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #4ade80;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.rc-live::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  animation: rc-pulse 2s infinite;
+}
+
+/* Category cards */
+.rc-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.rc-cat {
+  position: relative;
+  background: rgba(20, 24, 42, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px 16px 16px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  text-align: left;
+  font-family: inherit;
+  color: #fff;
+  width: 100%;
+}
+.rc-cat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(120, 160, 255, 0.10), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.rc-cat::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+}
+.rc-cat:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+}
+.rc-cat:hover::before { opacity: 1; }
+.rc-cat-active {
+  border-color: rgba(100, 150, 255, 0.4) !important;
+  background: rgba(30, 40, 70, 0.65);
+}
+
+/* Cat icon */
+.rc-cat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: all 0.25s;
+}
+.rc-cat:hover .rc-cat-icon { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); }
+.rc-cat-icon svg { width: 18px; height: 18px; stroke: #c4cce0; fill: none; stroke-width: 2; transition: stroke 0.25s; }
+.rc-cat:hover .rc-cat-icon svg { stroke: #fff; }
+
+/* Cat text */
+.rc-cat-text {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.rc-cat-text strong { display: block; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; letter-spacing: -0.2px; }
+.rc-cat-text span { display: block; font-size: 11.5px; color: #8892b0; font-weight: 500; }
+
+/* Cat mini-mic */
+.rc-cat-mini-mic {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: all 0.25s;
+}
+.rc-cat-mini-mic svg { width: 11px; height: 11px; fill: #5a6481; transition: fill 0.25s; }
+.rc-cat:hover .rc-cat-mini-mic { background: rgba(255, 255, 255, 0.1); }
+.rc-cat:hover .rc-cat-mini-mic svg { fill: #fff; }
+
+/* Cat input (hint field) */
+.rc-cat-input {
+  margin-top: 6px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 150, 255, 0.3);
+  background: rgba(5, 8, 17, 0.8);
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #e0e5f0;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+.rc-cat-input::placeholder { color: #5a6481; }
+.rc-cat-input:focus {
+  border-color: rgba(100, 150, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(100, 150, 255, 0.1);
+}
+
+@media (max-width: 380px) {
+  .rc-title { font-size: 28px; }
+  .rc-mic { width: 120px; height: 120px; }
+  .rc-mic svg { width: 48px; height: 48px; }
+  .rc-mic-area::before, .rc-mic-area::after { width: 170px; height: 170px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    ONBOARDING — Premium glassmorphism setup screen
    ══════════════════════════════════════════════════════════════════════ */
 .ob-body {

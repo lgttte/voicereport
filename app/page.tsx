@@ -13,10 +13,7 @@ import {
   X,
   FileText,
   Mic,
-  Square,
   MapPin,
-  Hammer,
-  AlertTriangle,
   CheckCircle,
   Play,
   Pause,
@@ -30,7 +27,6 @@ import {
   Trash2,
   BarChart3,
   WifiOff,
-  Type,
   Search,
   HardHat,
   CircleDot,
@@ -1201,104 +1197,104 @@ export default function Home() {
     // ── Recording screen ──
     if (isRecording) {
       return (
-        <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-          <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
-            {/* Recording indicator */}
-            <div className="flex items-center gap-2 mb-6 animate-fadeIn">
-              <span className="h-2.5 w-2.5 rounded-full bg-red-500 blink" />
-              <span className="text-sm font-medium text-red-400">En écoute...</span>
+        <div className="rc-body">
+          <div className="rc-orb rc-orb-1" />
+          <div className="rc-orb rc-orb-2" />
+          <div className="rc-orb rc-orb-3" />
+          <div className="rc-wrap">
+            {/* Recording badge */}
+            <div className="rc-badge">
+              <span className="rc-badge-dot rc-badge-dot-rec" />
+              En écoute...
             </div>
 
             {/* Timer */}
-            <p className="text-5xl font-light font-mono text-white tracking-widest mb-8 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
-              {formatTime(elapsed)}
-            </p>
+            <p className="rc-timer">{formatTime(elapsed)}</p>
 
-            {/* Sound wave visualization */}
-            <div className="flex items-center justify-center gap-[5px] h-10 mb-10">
+            {/* Sound wave */}
+            <div className="rc-wave">
               {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="w-[3px] rounded-full bg-red-400/70 sound-bar"
-                  style={{ animationDelay: `${i * 0.12}s` }}
-                />
+                <div key={i} className="rc-wave-bar" style={{ animationDelay: `${i * 0.12}s` }} />
               ))}
             </div>
 
-            {/* Stop button */}
-            <button
-              type="button"
-              onClick={handleButtonClick}
-              className="relative z-10 flex h-36 w-36 items-center justify-center rounded-full bg-red-700 hover:bg-red-600 text-white transition-all duration-300 focus:outline-none active:scale-95 shadow-none pulse-ring"
-            >
-              <Square className="h-12 w-12 fill-white" />
-            </button>
+            {/* Stop mic button */}
+            <div className="rc-mic-area rc-mic-area-rec">
+              <div className="rc-mic-glow rc-mic-glow-rec" />
+              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arrêter l'enregistrement">
+                <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+              </button>
+            </div>
 
-            {/* Instruction */}
-            <p className="text-sm font-light text-slate-400 mt-6">
-              Appuyez pour terminer
-            </p>
+            <p className="rc-instruction">Appuyez pour terminer</p>
           </div>
-        </main>
+        </div>
       );
     }
 
     // ── Idle screen (default) ──
     return (
-      <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-        <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
+      <div className="rc-body">
+        <div className="rc-orb rc-orb-1" />
+        <div className="rc-orb rc-orb-2" />
+        <div className="rc-orb rc-orb-3" />
+        <div className="rc-wrap">
           {/* Badge */}
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-800/60 border border-slate-700/50 px-3.5 py-1.5 mb-6 animate-fadeIn">
-            <span className="text-xs text-slate-400">⏱️ 30 secondes suffisent</span>
+          <div className="rc-badge">
+            <span className="rc-badge-dot" />
+            30 secondes suffisent
           </div>
 
           {/* Title */}
-          <h1 className="text-xl font-semibold text-white mb-1.5 animate-fadeIn stagger-1">
-            Nouveau rapport
-          </h1>
-          <p className="text-sm font-light text-slate-400 mb-10 animate-fadeIn stagger-2">
-            Appuyez et décrivez votre journée
-          </p>
+          <h1 className="rc-title">Nouveau rapport</h1>
+          <p className="rc-subtitle">Appuyez et décrivez votre journée</p>
 
           {/* Mic button */}
-          <button
-            type="button"
-            onClick={handleButtonClick}
-            className="relative z-10 flex h-36 w-36 items-center justify-center rounded-full bg-red-600 hover:bg-red-500 hover:scale-105 text-white transition-all duration-300 focus:outline-none active:scale-95 shadow-none animate-scaleIn stagger-2"
-          >
-            <Mic className="h-12 w-12" />
-          </button>
+          <div className="rc-mic-area">
+            <div className="rc-mic-glow" />
+            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Démarrer l'enregistrement">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M5 10a7 7 0 0 0 14 0" />
+                <line x1="12" y1="17" x2="12" y2="22" />
+                <line x1="8" y1="22" x2="16" y2="22" />
+              </svg>
+            </button>
+          </div>
 
-          {/* Reassurance — rotating phrases */}
-          <p className="text-sm font-light text-slate-400 mt-6 animate-fadeIn stagger-3 transition-opacity duration-500" key={encourageIdx}>
-            {ENCOURAGEMENT_PHRASES[encourageIdx]}
-          </p>
+          {/* Stat — rotating encouragement */}
+          <div className="rc-stat">
+            <span className="rc-live">Live</span>
+            <span key={encourageIdx} className="rc-stat-text">{ENCOURAGEMENT_PHRASES[encourageIdx]}</span>
+          </div>
 
-          {/* Hint chips — clickable → open text field */}
-          <div className="mt-10 grid grid-cols-2 gap-2 w-full">
+          {/* Category hint cards */}
+          <div className="rc-categories">
             {([
-              { icon: MapPin,        label: "Lieu",       hint: "Chantier, ville",   fieldKey: "lieu" },
-              { icon: Hammer,        label: "Travaux",    hint: "Ce qui a été fait",  fieldKey: "travaux" },
-              { icon: AlertTriangle, label: "Problèmes",  hint: "Retards, pannes",   fieldKey: "problemes" },
-              { icon: Package,       label: "Matériel",   hint: "Ce qui manque",     fieldKey: "materiel" },
-            ] as { icon: React.ElementType; label: string; hint: string; fieldKey: string }[]).map(
-              ({ icon: Icon, label, hint, fieldKey }, idx) => (
-                <div key={label} className={`animate-fadeInUp stagger-${idx + 4}`}>
+              { label: "Lieu",       hint: "Chantier, ville",   fieldKey: "lieu",
+                icon: <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+              { label: "Travaux",    hint: "Ce qui a été fait",  fieldKey: "travaux",
+                icon: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg> },
+              { label: "Problèmes", hint: "Retards, pannes",   fieldKey: "problemes",
+                icon: <svg viewBox="0 0 24 24"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
+              { label: "Matériel",  hint: "Ce qui manque",     fieldKey: "materiel",
+                icon: <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> },
+            ] as { icon: React.ReactNode; label: string; hint: string; fieldKey: string }[]).map(
+              ({ icon, label, hint, fieldKey }) => (
+                <div key={label}>
                   <button
                     type="button"
                     onClick={() => setActiveHintField(activeHintField === fieldKey ? null : fieldKey)}
-                    className={`flex items-center gap-2.5 rounded-xl w-full p-3 transition-all duration-200 ${
-                      activeHintField === fieldKey
-                        ? "bg-slate-700/60 border border-slate-600"
-                        : "bg-slate-800/40 border border-transparent hover:bg-slate-800/60"
-                    }`}
+                    className={`rc-cat${activeHintField === fieldKey ? " rc-cat-active" : ""}`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${activeHintField === fieldKey ? "text-sky-400" : "text-slate-500"}`} />
-                    <div className="min-w-0 text-left flex-1">
-                      <p className="text-xs font-medium text-white">{label}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{hint}</p>
-                    </div>
-                    <Type className={`h-3 w-3 shrink-0 ${activeHintField === fieldKey ? "text-sky-400" : "text-slate-600"}`} />
+                    <span className="rc-cat-icon">{icon}</span>
+                    <span className="rc-cat-text">
+                      <strong>{label}</strong>
+                      <span>{hint}</span>
+                    </span>
+                    <span className="rc-cat-mini-mic">
+                      <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5 9a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+                    </span>
                   </button>
                   {activeHintField === fieldKey && (
                     <input
@@ -1307,7 +1303,7 @@ export default function Home() {
                       value={hintTexts[fieldKey] || ""}
                       onChange={(e) => setHintTexts((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
                       placeholder={`Saisir ${label.toLowerCase()}...`}
-                      className="mt-1.5 w-full rounded-lg border border-slate-700/60 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/30 animate-fadeIn"
+                      className="rc-cat-input"
                     />
                   )}
                 </div>
@@ -1345,7 +1341,7 @@ export default function Home() {
             </button>
           )}
         </div>
-      </main>
+      </div>
     );
   }
 
