@@ -1407,7 +1407,6 @@ export default function Home() {
                 <span className="rv-hero-dot" style={{ background: heroColors.dot, boxShadow: `0 0 8px ${heroColors.dot}` }} />
                 {statutLabel[statutLevel]}
               </div>
-              <h1 className="rv-hero-title">Rapport du<br />{formattedDate}</h1>
               <div className="rv-hero-meta">
                 {chantierName && (
                   <>
@@ -1497,7 +1496,7 @@ export default function Home() {
                 <div className="rv-rub-title">Travaux réalisés</div>
                 <div className={`rv-rub-content${travauxItems.length === 0 ? " empty" : ""}`}>
                   {travauxItems.length > 0
-                    ? (travauxItems.length === 1 ? travauxItems[0] : `${travauxItems.length} tâches enregistrées`)
+                    ? <ul className="rv-rub-list">{travauxItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
                     : "Aucune tâche enregistrée"}
                 </div>
               </div>
@@ -1513,7 +1512,7 @@ export default function Home() {
                 <div className="rv-rub-title">Problèmes rencontrés</div>
                 <div className={`rv-rub-content${problemesItems.length === 0 ? " empty" : ""}`}>
                   {problemesItems.length > 0
-                    ? (problemesItems.length === 1 ? parseSeverity(problemesItems[0]).text : `${problemesItems.length} incidents signalés`)
+                    ? <ul className="rv-rub-list">{problemesItems.map((item, i) => <li key={i}>{parseSeverity(item).text}</li>)}</ul>
                     : "Aucun incident signalé"}
                 </div>
               </div>
@@ -1529,7 +1528,7 @@ export default function Home() {
                 <div className="rv-rub-title">Matériel manquant</div>
                 <div className={`rv-rub-content${materielItems.length === 0 ? " empty" : ""}`}>
                   {materielItems.length > 0
-                    ? (materielItems.length === 1 ? materielItems[0] : `${materielItems.length} manques déclarés`)
+                    ? <ul className="rv-rub-list">{materielItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
                     : "Aucun manque déclaré"}
                 </div>
               </div>
@@ -1545,7 +1544,7 @@ export default function Home() {
                 <div className="rv-rub-title">À prévoir</div>
                 <div className={`rv-rub-content${aPrevoirItems.length === 0 ? " empty" : ""}`}>
                   {aPrevoirItems.length > 0
-                    ? (aPrevoirItems.length === 1 ? aPrevoirItems[0] : `${aPrevoirItems.length} actions planifiées`)
+                    ? <ul className="rv-rub-list">{aPrevoirItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
                     : "Aucune action planifiée"}
                 </div>
               </div>

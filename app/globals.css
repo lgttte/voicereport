@@ -1526,8 +1526,10 @@ main {
   font-size: 13.5px; font-weight: 700;
   color: #fff; letter-spacing: -.2px; margin-bottom: 2px;
 }
-.rv-rub-content { font-size: 12px; color: #5a6481; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rv-rub-content.empty { font-style: italic; }
+.rv-rub-content { font-size: 13px; color: #c8d0e0; font-weight: 400; line-height: 1.5; }
+.rv-rub-content.empty { font-style: italic; color: #5a6481; }
+.rv-rub-list { list-style: disc; padding-left: 18px; margin: 4px 0 0; display: flex; flex-direction: column; gap: 2px; }
+.rv-rub-list li { white-space: normal; word-break: break-word; }
 
 /* rub badge */
 .rv-rub-badge {
