@@ -119,7 +119,11 @@ const MAX_HISTORY = 100;
 const OFFLINE_QUEUE_KEY = "voicereport_offline_queue";
 
 const ENCOURAGEMENT_PHRASES = [
-  "D\u00e9crivez votre journ\u00e9e de chantier",
+  "Parlez naturellement, comme \u00e0 votre patron",
+  "Votre patron recevra le rapport en 10 secondes",
+  "Plus de 500 rapports envoy\u00e9s cette semaine",
+  "Utilis\u00e9 sur 47 chantiers en France",
+  "30 secondes pour un rapport complet",
 ];
 
 type OfflineQueueItem = {
@@ -286,7 +290,8 @@ export default function Home() {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
   const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
-
+  const [activeHintField, setActiveHintField] = useState<string | null>(null);
+  const [hintTexts, setHintTexts] = useState<Record<string, string>>({});
   const [encourageIdx, setEncourageIdx] = useState(0);
   const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
   const [offlineBanner, setOfflineBanner] = useState(false);
@@ -440,6 +445,8 @@ export default function Home() {
     setIsPlaying(false);
     setPlaybackTime(0);
     setAudioDuration(0);
+    setActiveHintField(null);
+    setHintTexts({});
     // Reset enrichment (but keep selected chantier for next time)
     setEnrichEtat(null);
     setEnrichUrgent(null);
@@ -568,6 +575,15 @@ export default function Home() {
     } else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
     formData.append("audio", audioBlobRef.current, fileName);
 
+    // Append manual text context from hint fields if filled
+    const manualContext: Record<string, string> = {};
+    if (hintTexts.lieu?.trim()) manualContext.lieu = hintTexts.lieu.trim();
+    if (hintTexts.travaux?.trim()) manualContext.travaux = hintTexts.travaux.trim();
+    if (hintTexts.problemes?.trim()) manualContext.problemes = hintTexts.problemes.trim();
+    if (hintTexts.materiel?.trim()) manualContext.materiel = hintTexts.materiel.trim();
+    if (Object.keys(manualContext).length > 0) {
+      formData.append("manualContext", JSON.stringify(manualContext));
+    }
 
     // Append enrichment data from post-recording step
     if (enrichData) {
@@ -849,11 +865,67 @@ export default function Home() {
 
           <div className="vf-wrap">
 
-            {/* Title */}
-            <h1 className="vf-title">Votre rapport est pr\u00eat</h1>
-            <p className="vf-subtitle">G\u00e9n\u00e9r\u00e9 automatiquement \u00e0 partir de votre vocal</p>
+            {/* Badge */}
+            <div className="vf-badge">
+              <span className="vf-badge-check">✓</span>
+              Enregistrement réussi
+            </div>
 
-            {/* CTA — primary */}
+            {/* Title */}
+            <h1 className="vf-title">Vérifiez votre enregistrement</h1>
+            <p className="vf-subtitle">Réécoutez avant de générer le rapport</p>
+
+            {/* Player */}
+            <div className="vf-player">
+              <button
+                type="button"
+                className="vf-play-btn"
+                aria-label={isPlaying ? "Pause" : "Lecture"}
+                onClick={togglePlayback}
+              >
+                {isPlaying ? (
+                  <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                )}
+              </button>
+
+              {/* Waveform */}
+              <div className="vf-waveform">
+                {Array.from({ length: BARS }).map((_, i) => {
+                  const t = i / BARS;
+                  const h = 25 + Math.sin(t * 12) * 30 + Math.sin(t * 27) * 20 + ((Math.sin(i * 137.5) + 1) * 15);
+                  const height = Math.max(15, Math.min(100, h));
+                  const played = totalDur > 0 && (i / BARS) < (playbackTime / totalDur);
+                  return (
+                    <div
+                      key={i}
+                      className={`vf-bar${played ? " played" : ""}`}
+                      style={{ height: `${height}%` }}
+                      onClick={() => handleWaveSeek(i)}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Timer */}
+              <div className="vf-timer">
+                <span className="vf-timer-current">{formatTime(Math.floor(playbackTime))}</span>
+                <span className="vf-timer-sep">/</span>
+                <span>{formatTime(Math.floor(totalDur))}</span>
+              </div>
+            </div>
+
+            {/* Info row */}
+            <div className="vf-info-row">
+              <div className="vf-info-left">
+                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
+                Audio capturé · {totalDurSec} seconde{totalDurSec !== 1 ? "s" : ""}
+              </div>
+              <div className="vf-quality">Qualité HD</div>
+            </div>
+
+            {/* CTA */}
             <button
               type="button"
               className="vf-cta"
@@ -871,29 +943,19 @@ export default function Home() {
                   <line x1="9" y1="17" x2="15" y2="17" />
                 </svg>
               </span>
-              Voir mon rapport
-              <span className="vf-cta-arrow">\u2192</span>
+              Générer mon rapport
+              <span className="vf-cta-arrow">→</span>
             </button>
 
-            {/* Secondary actions */}
-            <div className="vf-secondary-row">
-              <button
-                type="button"
-                className="vf-restart"
-                onClick={togglePlayback}
-              >
-                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                R\u00e9\u00e9couter
-              </button>
-              <button
-                type="button"
-                className="vf-restart"
-                onClick={resetFlow}
-              >
-                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
-                Recommencer
-              </button>
-            </div>
+            {/* Restart */}
+            <button
+              type="button"
+              className="vf-restart"
+              onClick={resetFlow}
+            >
+              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+              Recommencer l&apos;enregistrement
+            </button>
           </div>
         </main>
       );
@@ -1129,23 +1191,32 @@ export default function Home() {
       );
     }
 
-    // ── Processing screen (AI transition) ──
+    // ── Processing screen ──
     if (stage === "processing") {
       return (
         <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
-          <div className="flex flex-col items-center gap-8 animate-fadeIn">
-            <div className="relative flex h-24 w-24 items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-sky-500/20 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-2 rounded-full bg-sky-500/10 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.3s' }} />
-              <Loader2 className="h-10 w-10 text-sky-400 animate-spin" />
+          <div className="flex flex-col items-center gap-6 animate-fadeIn">
+            <div className="flex h-28 w-28 items-center justify-center rounded-full animate-scaleIn">
+              <Loader2 className="h-12 w-12 text-sky-400 animate-spin" />
             </div>
             <div className="text-center space-y-2">
-              <p className="text-lg font-semibold text-white animate-fadeInUp">
-                Cr\u00e9ation du rapport\u2026
+              <p className="text-base font-medium text-white animate-fadeInUp stagger-2">
+                Analyse en cours...
               </p>
-              <p className="text-sm text-slate-400 animate-fadeInUp" style={{ animationDelay: '0.3s' }}>
-                Analyse de votre journ\u00e9e en cours
-              </p>
+              <div className="space-y-1.5 animate-fadeInUp stagger-3">
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-sky-400 animate-pulse" />
+                  Transcription vocale
+                </p>
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-slate-600" />
+                  Structuration du rapport
+                </p>
+                <p className="text-sm text-slate-500 flex items-center justify-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-slate-600" />
+                  Analyse des risques
+                </p>
+              </div>
             </div>
           </div>
         </main>
@@ -1163,7 +1234,7 @@ export default function Home() {
             {/* Recording badge */}
             <div className="rc-badge">
               <span className="rc-badge-dot rc-badge-dot-rec" />
-              Enregistrement\u2026
+              En écoute...
             </div>
 
             {/* Timer */}
@@ -1179,12 +1250,12 @@ export default function Home() {
             {/* Stop mic button */}
             <div className="rc-mic-area rc-mic-area-rec">
               <div className="rc-mic-glow rc-mic-glow-rec" />
-              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arr\u00eater l'enregistrement">
+              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arrêter l'enregistrement">
                 <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
               </button>
             </div>
 
-            <p className="rc-instruction">Vous pourrez v\u00e9rifier ensuite</p>
+            <p className="rc-instruction">Appuyez pour terminer</p>
           </div>
         </div>
       );
@@ -1197,14 +1268,20 @@ export default function Home() {
         <div className="rc-orb rc-orb-2" />
         <div className="rc-orb rc-orb-3" />
         <div className="rc-wrap">
+          {/* Badge */}
+          <div className="rc-badge">
+            <span className="rc-badge-dot" />
+            30 secondes suffisent
+          </div>
+
           {/* Title */}
           <h1 className="rc-title">Nouveau rapport</h1>
-          <p className="rc-subtitle">Parlez comme \u00e0 votre patron : travaux, probl\u00e8mes, mat\u00e9riel</p>
+          <p className="rc-subtitle">Appuyez et décrivez votre journée</p>
 
           {/* Mic button */}
           <div className="rc-mic-area">
             <div className="rc-mic-glow" />
-            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="D\u00e9marrer l'enregistrement">
+            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Démarrer l'enregistrement">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="2" width="6" height="12" rx="3" />
                 <path d="M5 10a7 7 0 0 0 14 0" />
@@ -1214,7 +1291,54 @@ export default function Home() {
             </button>
           </div>
 
-          <p className="rc-instruction">Appuyez pour parler</p>
+          {/* Stat — rotating encouragement */}
+          <div className="rc-stat">
+            <span className="rc-live">Live</span>
+            <span key={encourageIdx} className="rc-stat-text">{ENCOURAGEMENT_PHRASES[encourageIdx]}</span>
+          </div>
+
+          {/* Category hint cards */}
+          <div className="rc-categories">
+            {([
+              { label: "Lieu",       hint: "Chantier, ville",   fieldKey: "lieu",
+                icon: <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
+              { label: "Travaux",    hint: "Ce qui a été fait",  fieldKey: "travaux",
+                icon: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg> },
+              { label: "Problèmes", hint: "Retards, pannes",   fieldKey: "problemes",
+                icon: <svg viewBox="0 0 24 24"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
+              { label: "Matériel",  hint: "Ce qui manque",     fieldKey: "materiel",
+                icon: <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> },
+            ] as { icon: React.ReactNode; label: string; hint: string; fieldKey: string }[]).map(
+              ({ icon, label, hint, fieldKey }) => (
+                <div key={label}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveHintField(activeHintField === fieldKey ? null : fieldKey)}
+                    className={`rc-cat${activeHintField === fieldKey ? " rc-cat-active" : ""}`}
+                  >
+                    <span className="rc-cat-icon">{icon}</span>
+                    <span className="rc-cat-text">
+                      <strong>{label}</strong>
+                      <span>{hint}</span>
+                    </span>
+                    <span className="rc-cat-mini-mic">
+                      <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5 9a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+                    </span>
+                  </button>
+                  {activeHintField === fieldKey && (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={hintTexts[fieldKey] || ""}
+                      onChange={(e) => setHintTexts((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
+                      placeholder={`Saisir ${label.toLowerCase()}...`}
+                      className="rc-cat-input"
+                    />
+                  )}
+                </div>
+              )
+            )}
+          </div>
 
           {/* Offline queue banner */}
           {offlineQueue.length > 0 && (
@@ -1227,7 +1351,7 @@ export default function Home() {
                   onClick={() => window.dispatchEvent(new Event("online"))}
                   className="text-[10px] text-amber-400 font-semibold hover:text-amber-300"
                 >
-                  R\u00e9essayer
+                  Réessayer
                 </button>
               )}
             </div>
