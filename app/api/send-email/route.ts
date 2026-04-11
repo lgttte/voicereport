@@ -83,14 +83,18 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     return arr.filter(s => !PLACEHOLDER_RE.test(s));
   };
 
-  /** Sanitize emojis that jsPDF cannot render */
+  /** Strip ALL non-Latin1 characters (emojis, extended Unicode) that jsPDF/Helvetica cannot render */
   const sanitizeEmoji = (text: string): string =>
     text
-      .replace(/⚠️/g, "[Attention]")
-      .replace(/🚨/g, "[Critique]")
-      .replace(/🟢/g, "")
-      .replace(/🟠/g, "")
-      .replace(/🔴/g, "")
+      .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")     // Emoticons, symbols, flags
+      .replace(/[\u{2600}-\u{27BF}]/gu, "")        // Misc symbols, dingbats
+      .replace(/[\u{FE00}-\u{FE0F}]/gu, "")        // Variation selectors
+      .replace(/[\u{200D}]/gu, "")                  // Zero-width joiner
+      .replace(/[\u{20E3}]/gu, "")                  // Combining enclosing keycap
+      .replace(/[\u{E0020}-\u{E007F}]/gu, "")      // Tags
+      .replace(/[^\x00-\xFF]/g, "")                // Strip anything outside Latin-1
+      .replace(/\[Critique\]/g, "[Critique]")
+      .replace(/\[Attention\]/g, "[Attention]")
       .replace(/\s{2,}/g, " ")
       .trim();
 
@@ -173,6 +177,8 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const ACCENT_H = 4;
   const PAGE_BOTTOM = PH - 16;
 
+  let totalPages = 1; // updated after page assembly
+
   // ── Draw footer on current page ────────────────────────────────────
   function drawFooter(page: number) {
     doc.setDrawColor(...BGRAY);
@@ -182,7 +188,19 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MGRAY);
     doc.text("VoiceReport \u2014 Le rapport chantier en 30 secondes", ML, PH - 8);
-    doc.text("Page " + page, PW - MR, PH - 8, { align: "right" });
+
+    // "PAGE 01 / 02" pill
+    const label = "PAGE " + String(page).padStart(2, "0") + " / " + String(totalPages).padStart(2, "0");
+    const pillW = 28;
+    const pillH = 5;
+    const pillX = PW - MR - pillW;
+    const pillY = PH - 11;
+    doc.setFillColor(...NAVY_900);
+    doc.roundedRect(pillX, pillY, pillW, pillH, 2.5, 2.5, "F");
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text(label, pillX + pillW / 2, pillY + pillH / 2 + 1, { align: "center" });
   }
 
   // ── Draw diamond shape ─────────────────────────────────────────────
@@ -301,13 +319,9 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     const COL_W = (CW - GAP * 2) / 3;
 
     const kpis: { label: string; value: string; border: RGB }[] = [];
-    kpis.push({ label: "Travaux", value: String(travaux.length), border: NAVY_700 });
-    kpis.push({ label: "Mat\u00e9riel", value: String(materiel.length), border: AMBER });
-    if (equipe) {
-      kpis.push({ label: "\u00c9quipe", value: equipe, border: GREEN });
-    } else {
-      kpis.push({ label: "Probl\u00e8mes", value: String(problemes.length), border: RED });
-    }
+    kpis.push({ label: "Travaux", value: String(travaux.length).padStart(2, "0"), border: NAVY_700 });
+    kpis.push({ label: "Mat\u00e9riel", value: String(materiel.length).padStart(2, "0"), border: AMBER });
+    kpis.push({ label: "\u00c9quipe", value: equipe || "\u2014", border: GREEN });
 
     for (let i = 0; i < 3; i++) {
       const kx = ML + i * (COL_W + GAP);
@@ -511,7 +525,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...AMBER);
-      doc.text(String(i + 1) + ".", ML + 10, iy + 4);
+      doc.text(String(i + 1).padStart(2, "0") + ".", ML + 10, iy + 4);
 
       // White text
       doc.setFontSize(9);
@@ -527,13 +541,34 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     return y + cardH + 6;
   }
 
-  // ── Impact section (red left-border cards with RISQUE badge) ───────
+  // ── Impact section (single red card with all impacts listed) ────────
   function drawImpactSection(y: number): number {
     if (impacts.length === 0) return y;
 
-    // Warning triangle icon
-    const tx = ML + 3;
-    const tiy = y + 5;
+    // Pre-compute all impact lines
+    doc.setFontSize(9);
+    const cleanedImpacts = impacts.map(imp =>
+      sanitizeEmoji(imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "")).trim() || imp
+    );
+    const impactLines: string[][] = cleanedImpacts.map(ci =>
+      doc.splitTextToSize(ci, CW - 24) as string[]
+    );
+    let totalLines = 0;
+    for (const lines of impactLines) totalLines += lines.length;
+    const cardH = 18 + totalLines * 5 + impacts.length * 3 + 4;
+
+    if (y + cardH > PAGE_BOTTOM) { y = newPage(); }
+
+    // Single red-bordered card
+    doc.setFillColor(...RED_SOFT);
+    doc.roundedRect(ML, y, CW, cardH, 2, 2, "F");
+    doc.setFillColor(...RED);
+    doc.roundedRect(ML, y, 3, cardH, 2, 0, "F");
+    doc.rect(ML + 1.5, y, 1.5, cardH, "F");
+
+    // Header: triangle icon + "RISQUE" badge + title
+    const tx = ML + 9;
+    const tiy = y + 9;
     doc.setFillColor(...RED);
     doc.triangle(tx, tiy - 3, tx - 2.5, tiy + 2, tx + 2.5, tiy + 2, "F");
     doc.setFontSize(5);
@@ -541,47 +576,40 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setTextColor(...WHITE);
     doc.text("!", tx, tiy + 1.2, { align: "center" });
 
+    // "RISQUE" badge
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    doc.setFillColor(...RED);
+    doc.roundedRect(ML + 14, y + 4, 16, 5, 2.5, 2.5, "F");
+    doc.setTextColor(...WHITE);
+    doc.text("RISQUE", ML + 22, y + 7.5, { align: "center" });
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...RED);
-    doc.text("Impacts d\u00e9tect\u00e9s", ML + 9, y + 7);
-    y += 12;
+    doc.text("Impacts d\u00e9tect\u00e9s", ML + 34, y + 9);
 
-    for (const imp of impacts) {
-      const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
-      doc.setFontSize(9);
-      const lines = doc.splitTextToSize(cleanImp || imp, CW - 22) as string[];
-      const cardH = lines.length * 5 + 10;
-
-      if (y + cardH > PAGE_BOTTOM) { y = newPage(); }
-
-      // Red-bordered card
-      doc.setFillColor(...RED_SOFT);
-      doc.roundedRect(ML, y, CW, cardH, 2, 2, "F");
+    // List items with red triangle prefix
+    let iy = y + 18;
+    for (let i = 0; i < impactLines.length; i++) {
+      // Small red triangle bullet
+      const bx = ML + 10;
+      const by = iy + 1;
       doc.setFillColor(...RED);
-      doc.roundedRect(ML, y, 3, cardH, 2, 0, "F");
-      doc.rect(ML + 1.5, y, 1.5, cardH, "F");
-
-      // "RISQUE" badge
-      doc.setFontSize(6);
-      doc.setFont("helvetica", "bold");
-      doc.setFillColor(...RED);
-      doc.roundedRect(ML + 8, y + 2, 16, 5, 2.5, 2.5, "F");
-      doc.setTextColor(...WHITE);
-      doc.text("RISQUE", ML + 16, y + 5.5, { align: "center" });
+      doc.triangle(bx, by - 1.5, bx - 1.5, by + 1, bx + 1.5, by + 1, "F");
 
       // Impact text
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...DGRAY);
-      let ly = y + 12;
-      for (const line of lines) {
-        doc.text(line, ML + 8, ly);
-        ly += 5;
+      for (const line of impactLines[i]) {
+        doc.text(line, ML + 16, iy + 2);
+        iy += 5;
       }
-      y += cardH + 4;
+      iy += 3;
     }
-    return y + 4;
+
+    return y + cardH + 6;
   }
 
   // ── Certification block (gray bg) ─────────────────────────────────
@@ -725,6 +753,13 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   }
 
   // ── Convert to buffer
+  totalPages = pageNum;
+  // Re-draw footers with correct total page count
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawFooter(p);
+  }
+
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
   console.log(`[PDF GENERATION] PDF OK - ${(pdfBuffer.length / 1024).toFixed(0)}KB`);
   console.log(`[PDF GENERATION] ========== GENERATION COMPLETE ==========`);

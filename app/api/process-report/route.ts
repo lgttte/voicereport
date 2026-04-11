@@ -935,7 +935,7 @@ function generateReportPDF(report: ReportSections): Buffer {
     const addSection = (title: string, items: string[], emoji: string) => {
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(`${emoji} ${title}`, 20, yPosition);
+      doc.text(`${emoji ? emoji + " " : ""}${title}`, 20, yPosition);
       yPosition += 10;
 
       doc.setFontSize(11);
@@ -961,13 +961,13 @@ function generateReportPDF(report: ReportSections): Buffer {
 
     // Sections du rapport
     console.log(`[PDF GENERATION] Ajout de la section: Travaux Réalisés`);
-    addSection("Travaux Réalisés", report.travaux_realises, "🧱");
+    addSection("Travaux Réalisés", report.travaux_realises, "");
     console.log(`[PDF GENERATION] Ajout de la section: Problèmes Rencontrés`);
-    addSection("Problèmes Rencontrés", report.problemes_rencontres, "⚠️");
+    addSection("Problèmes Rencontrés", report.problemes_rencontres, "");
     console.log(`[PDF GENERATION] Ajout de la section: Matériel Manquant`);
-    addSection("Matériel Manquant", report.materiel_manquant, "📦");
+    addSection("Matériel Manquant", report.materiel_manquant, "");
     console.log(`[PDF GENERATION] Ajout de la section: À Prévoir`);
-    addSection("À Prévoir", report.a_prevoir, "📅");
+    addSection("À Prévoir", report.a_prevoir, "");
 
     // Pied de page
     const pageHeight = doc.internal.pageSize.height;

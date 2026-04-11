@@ -119,11 +119,7 @@ const MAX_HISTORY = 100;
 const OFFLINE_QUEUE_KEY = "voicereport_offline_queue";
 
 const ENCOURAGEMENT_PHRASES = [
-  "Parlez naturellement, comme \u00e0 votre patron",
-  "Votre patron recevra le rapport en 10 secondes",
-  "Plus de 500 rapports envoy\u00e9s cette semaine",
-  "Utilis\u00e9 sur 47 chantiers en France",
-  "30 secondes pour un rapport complet",
+  "D\u00e9crivez votre journ\u00e9e de chantier",
 ];
 
 type OfflineQueueItem = {
@@ -290,8 +286,7 @@ export default function Home() {
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
   const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
-  const [activeHintField, setActiveHintField] = useState<string | null>(null);
-  const [hintTexts, setHintTexts] = useState<Record<string, string>>({});
+
   const [encourageIdx, setEncourageIdx] = useState(0);
   const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
   const [offlineBanner, setOfflineBanner] = useState(false);
@@ -445,8 +440,6 @@ export default function Home() {
     setIsPlaying(false);
     setPlaybackTime(0);
     setAudioDuration(0);
-    setActiveHintField(null);
-    setHintTexts({});
     // Reset enrichment (but keep selected chantier for next time)
     setEnrichEtat(null);
     setEnrichUrgent(null);
@@ -575,15 +568,6 @@ export default function Home() {
     } else if (blobType.includes("ogg")) fileName = "enregistrement.ogg";
     formData.append("audio", audioBlobRef.current, fileName);
 
-    // Append manual text context from hint fields if filled
-    const manualContext: Record<string, string> = {};
-    if (hintTexts.lieu?.trim()) manualContext.lieu = hintTexts.lieu.trim();
-    if (hintTexts.travaux?.trim()) manualContext.travaux = hintTexts.travaux.trim();
-    if (hintTexts.problemes?.trim()) manualContext.problemes = hintTexts.problemes.trim();
-    if (hintTexts.materiel?.trim()) manualContext.materiel = hintTexts.materiel.trim();
-    if (Object.keys(manualContext).length > 0) {
-      formData.append("manualContext", JSON.stringify(manualContext));
-    }
 
     // Append enrichment data from post-recording step
     if (enrichData) {
@@ -922,7 +906,7 @@ export default function Home() {
                 <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
                 Audio capturé · {totalDurSec} seconde{totalDurSec !== 1 ? "s" : ""}
               </div>
-              <div className="vf-quality">Qualité HD</div>
+
             </div>
 
             {/* CTA */}
@@ -1268,15 +1252,8 @@ export default function Home() {
         <div className="rc-orb rc-orb-2" />
         <div className="rc-orb rc-orb-3" />
         <div className="rc-wrap">
-          {/* Badge */}
-          <div className="rc-badge">
-            <span className="rc-badge-dot" />
-            30 secondes suffisent
-          </div>
-
           {/* Title */}
           <h1 className="rc-title">Nouveau rapport</h1>
-          <p className="rc-subtitle">Appuyez et décrivez votre journée</p>
 
           {/* Mic button */}
           <div className="rc-mic-area">
@@ -1291,54 +1268,10 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Stat — rotating encouragement */}
-          <div className="rc-stat">
-            <span className="rc-live">Live</span>
-            <span key={encourageIdx} className="rc-stat-text">{ENCOURAGEMENT_PHRASES[encourageIdx]}</span>
-          </div>
-
-          {/* Category hint cards */}
-          <div className="rc-categories">
-            {([
-              { label: "Lieu",       hint: "Chantier, ville",   fieldKey: "lieu",
-                icon: <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
-              { label: "Travaux",    hint: "Ce qui a été fait",  fieldKey: "travaux",
-                icon: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg> },
-              { label: "Problèmes", hint: "Retards, pannes",   fieldKey: "problemes",
-                icon: <svg viewBox="0 0 24 24"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
-              { label: "Matériel",  hint: "Ce qui manque",     fieldKey: "materiel",
-                icon: <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> },
-            ] as { icon: React.ReactNode; label: string; hint: string; fieldKey: string }[]).map(
-              ({ icon, label, hint, fieldKey }) => (
-                <div key={label}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveHintField(activeHintField === fieldKey ? null : fieldKey)}
-                    className={`rc-cat${activeHintField === fieldKey ? " rc-cat-active" : ""}`}
-                  >
-                    <span className="rc-cat-icon">{icon}</span>
-                    <span className="rc-cat-text">
-                      <strong>{label}</strong>
-                      <span>{hint}</span>
-                    </span>
-                    <span className="rc-cat-mini-mic">
-                      <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5 9a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
-                    </span>
-                  </button>
-                  {activeHintField === fieldKey && (
-                    <input
-                      type="text"
-                      autoFocus
-                      value={hintTexts[fieldKey] || ""}
-                      onChange={(e) => setHintTexts((prev) => ({ ...prev, [fieldKey]: e.target.value }))}
-                      placeholder={`Saisir ${label.toLowerCase()}...`}
-                      className="rc-cat-input"
-                    />
-                  )}
-                </div>
-              )
-            )}
-          </div>
+          {/* Instruction phrase */}
+          <p className="rc-instruction">
+            Décrivez les travaux réalisés, les problèmes rencontrés, le matériel manquant et ce qui est à prévoir.
+          </p>
 
           {/* Offline queue banner */}
           {offlineQueue.length > 0 && (
