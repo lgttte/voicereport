@@ -15,8 +15,6 @@ import {
   Mic,
   MapPin,
   CheckCircle,
-  Play,
-  Pause,
   RotateCcw,
   Sparkles,
   TrendingUp,
@@ -842,8 +840,23 @@ export default function Home() {
     // ── Audio preview screen ──
     if (stage === "preview" && audioUrl) {
       const progress = audioDuration > 0 ? (playbackTime / audioDuration) * 100 : 0;
+      const totalDur = audioDuration > 0 ? audioDuration : elapsed;
+      const totalDurSec = Math.round(totalDur);
+      const BARS = 60;
+
+      const handleWaveSeek = (barIndex: number) => {
+        if (!audioRef.current || totalDur <= 0) return;
+        const seekTime = (barIndex / BARS) * totalDur;
+        audioRef.current.currentTime = seekTime;
+        setPlaybackTime(seekTime);
+      };
+
       return (
-        <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center justify-center overflow-hidden px-6 py-10">
+        <main className="vf-body">
+          <div className="vf-orb vf-orb-1" />
+          <div className="vf-orb vf-orb-2" />
+          <div className="vf-orb vf-orb-3" />
+
           {/* Hidden audio element */}
           <audio
             ref={audioRef}
@@ -864,62 +877,99 @@ export default function Home() {
             }}
           />
 
-          <div className="relative z-10 flex flex-col items-center w-full max-w-sm">
-            <p className="mb-3 text-center text-lg font-light text-white/80 animate-fadeIn">
-              Vérifiez votre enregistrement
-            </p>
-            <p className="mb-10 text-center text-sm font-light text-slate-400 animate-fadeIn stagger-1">
-              Réécoutez avant de lancer l&apos;analyse IA
-            </p>
+          <div className="vf-wrap">
 
-            {/* Pill audio player */}
-            <div className="bg-slate-800/40 border border-slate-700/50 rounded-full backdrop-blur-md p-2 flex items-center gap-4 w-full max-w-sm mx-auto animate-scaleIn stagger-2">
-              {/* Play / Pause button */}
+            {/* Badge */}
+            <div className="vf-badge">
+              <span className="vf-badge-check">✓</span>
+              Enregistrement réussi
+            </div>
+
+            {/* Title */}
+            <h1 className="vf-title">Vérifiez votre enregistrement</h1>
+            <p className="vf-subtitle">Réécoutez avant de générer le rapport</p>
+
+            {/* Player */}
+            <div className="vf-player">
               <button
                 type="button"
+                className="vf-play-btn"
+                aria-label={isPlaying ? "Pause" : "Lecture"}
                 onClick={togglePlayback}
-                className="flex h-11 w-11 shrink-0 items-center justify-center bg-white text-black rounded-full hover:scale-105 transition-transform"
               >
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                {isPlaying ? (
+                  <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                )}
               </button>
 
-              {/* Progress bar */}
-              <div className="h-1 bg-slate-700 rounded-full flex-1 relative overflow-hidden">
-                <div
-                  className="absolute inset-y-0 left-0 bg-white rounded-full transition-[width] duration-150"
-                  style={{ width: `${progress}%` }}
-                />
+              {/* Waveform */}
+              <div className="vf-waveform">
+                {Array.from({ length: BARS }).map((_, i) => {
+                  const t = i / BARS;
+                  const h = 25 + Math.sin(t * 12) * 30 + Math.sin(t * 27) * 20 + ((Math.sin(i * 137.5) + 1) * 15);
+                  const height = Math.max(15, Math.min(100, h));
+                  const played = totalDur > 0 && (i / BARS) < (playbackTime / totalDur);
+                  return (
+                    <div
+                      key={i}
+                      className={`vf-bar${played ? " played" : ""}`}
+                      style={{ height: `${height}%` }}
+                      onClick={() => handleWaveSeek(i)}
+                    />
+                  );
+                })}
               </div>
 
-              {/* Time display */}
-              <span className="text-xs text-slate-400 font-mono shrink-0 pr-1">
-                {formatTime(Math.floor(playbackTime))}/{formatTime(audioDuration > 0 ? Math.floor(audioDuration) : elapsed)}
-              </span>
+              {/* Timer */}
+              <div className="vf-timer">
+                <span className="vf-timer-current">{formatTime(Math.floor(playbackTime))}</span>
+                <span className="vf-timer-sep">/</span>
+                <span>{formatTime(Math.floor(totalDur))}</span>
+              </div>
             </div>
 
-            {/* Action buttons */}
-            <div className="mt-10 flex flex-col items-center gap-4 w-full animate-fadeInUp stagger-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsPlaying(false);
-                  if (audioRef.current) audioRef.current.pause();
-                  setStage("enrich");
-                }}
-                className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white py-3.5 text-sm font-semibold text-black transition-all duration-200 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <Sparkles className="h-4 w-4" />
-                Continuer
-              </button>
-              <button
-                type="button"
-                onClick={resetFlow}
-                className="flex items-center gap-2 text-sm font-light text-slate-400 transition hover:text-white"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Recommencer
-              </button>
+            {/* Info row */}
+            <div className="vf-info-row">
+              <div className="vf-info-left">
+                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
+                Audio capturé · {totalDurSec} seconde{totalDurSec !== 1 ? "s" : ""}
+              </div>
+              <div className="vf-quality">Qualité HD</div>
             </div>
+
+            {/* CTA */}
+            <button
+              type="button"
+              className="vf-cta"
+              onClick={() => {
+                setIsPlaying(false);
+                if (audioRef.current) audioRef.current.pause();
+                setStage("enrich");
+              }}
+            >
+              <span className="vf-cta-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#050811" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="9" y1="13" x2="15" y2="13" />
+                  <line x1="9" y1="17" x2="15" y2="17" />
+                </svg>
+              </span>
+              Générer mon rapport
+              <span className="vf-cta-arrow">→</span>
+            </button>
+
+            {/* Restart */}
+            <button
+              type="button"
+              className="vf-restart"
+              onClick={resetFlow}
+            >
+              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
+              Recommencer l&apos;enregistrement
+            </button>
           </div>
         </main>
       );
