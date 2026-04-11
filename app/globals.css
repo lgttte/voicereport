@@ -545,7 +545,7 @@ main {
   z-index: 0;
   animation: ob-float 12s ease-in-out infinite;
 }
-.ob-orb-1 { width: 380px; height: 380px; background: #ff4d4d; top: -120px; left: 50%; --ob-tx: -50%; transform: translateX(-50%); }
+.ob-orb-1 { width: 380px; height: 380px; background: #3b82f6; top: -120px; left: 50%; --ob-tx: -50%; transform: translateX(-50%); }
 .ob-orb-2 { width: 280px; height: 280px; background: #ff7a3d; bottom: -80px; right: -60px; animation-delay: -4s; }
 .ob-orb-3 { width: 240px; height: 240px; background: #5b3dff; bottom: 10%; left: -80px; animation-delay: -8s; }
 @keyframes ob-float {
