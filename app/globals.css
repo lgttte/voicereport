@@ -339,9 +339,15 @@ main {
   color: #8892b0;
   font-weight: 500;
   margin-bottom: 36px;
+  max-width: 100%;
+  overflow: hidden;
 }
 .rc-stat-text {
   animation: fadeIn 0.5s ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .rc-live {
   display: inline-flex;

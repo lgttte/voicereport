@@ -69,9 +69,9 @@ export default function EliteDashboard({ reports, userName, onNewReport, onDelet
           {/* Header card */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-3 animate-fadeIn">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{STATUS_EMOJI[sl]}</span>
-                <span className="text-lg font-bold text-white">{r.lieu_chantier || "Rapport"}</span>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="text-xl shrink-0">{STATUS_EMOJI[sl]}</span>
+                <span className="text-lg font-bold text-white truncate min-w-0">{r.lieu_chantier || "Rapport"}</span>
               </div>
               {r.score != null && (
                 <div className={`text-xl font-bold ${r.score >= 7 ? "text-emerald-400" : r.score >= 5 ? "text-amber-400" : "text-red-400"}`}>
@@ -186,7 +186,7 @@ export default function EliteDashboard({ reports, userName, onNewReport, onDelet
           {/* Header */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 animate-fadeIn">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2 min-w-0 flex-1 truncate">
                 {STATUS_EMOJI[c.status]} {c.name}
               </h2>
               {c.score !== null && (
@@ -292,14 +292,14 @@ export default function EliteDashboard({ reports, userName, onNewReport, onDelet
                     className="w-full rounded-xl border border-slate-800 bg-slate-900/40 p-3.5 text-left transition-all hover:border-slate-700 hover:bg-slate-800/60 active:scale-[0.98]"
                   >
                     <div className="flex items-center justify-between mb-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{STATUS_EMOJI[sl]}</span>
-                        <span className="text-xs font-medium text-white">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span className="text-sm shrink-0">{STATUS_EMOJI[sl]}</span>
+                        <span className="text-xs font-medium text-white truncate">
                           {new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}
                         </span>
-                        {sr.userName && <span className="text-[10px] text-slate-500">• {sr.userName}</span>}
+                        {sr.userName && <span className="text-[10px] text-slate-500 truncate shrink-0">• {sr.userName}</span>}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
                         {sr.report.score != null && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}
                         <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
                       </div>
@@ -564,13 +564,13 @@ export default function EliteDashboard({ reports, userName, onNewReport, onDelet
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-[10px] text-slate-600">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-slate-600">
                       <span>{c.reportCount} rapport{c.reportCount > 1 ? "s" : ""}</span>
                       <span>·</span>
                       <span>{new Date(c.lastReportDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
                       {c.latestReport.userName && <>
                         <span>·</span>
-                        <span>👤 {c.latestReport.userName}</span>
+                        <span className="truncate max-w-[120px]">👤 {c.latestReport.userName}</span>
                       </>}
                     </div>
                   </button>
@@ -626,9 +626,9 @@ export default function EliteDashboard({ reports, userName, onNewReport, onDelet
                       <span className="text-sm">{STATUS_EMOJI[sl]}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-white truncate">{sr.report.lieu_chantier || sr.enrichment?.chantierName || "Rapport"}</p>
-                        <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-600">
                           <span>{new Date(sr.date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                          {sr.userName && <span>• {sr.userName}</span>}
+                          {sr.userName && <span className="truncate max-w-[100px]">• {sr.userName}</span>}
                         </div>
                       </div>
                       {sr.report.score != null && <span className="text-xs font-bold text-amber-400">{sr.report.score}/10</span>}

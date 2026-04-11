@@ -1014,7 +1014,7 @@ export default function Home() {
 
       return (
         <main className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 to-slate-950 flex flex-col items-center overflow-hidden px-5 py-8">
-          <div className="relative z-10 w-full max-w-md space-y-5">
+          <div className="relative z-10 w-full max-w-md space-y-5 overflow-hidden break-words">
 
             {/* Header */}
             <div className="text-center animate-fadeIn">
@@ -1058,10 +1058,10 @@ export default function Home() {
                       type="button"
                       key={c.id}
                       onClick={() => { setEnrichSelectedChantier(c.id); setEnrichChantierSearch(""); }}
-                      className="w-full flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-all hover:border-slate-600 hover:bg-slate-800/60 active:scale-[0.98]"
+                      className="w-full flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3 text-left transition-all hover:border-slate-600 hover:bg-slate-800/60 active:scale-[0.98] min-w-0"
                     >
                       <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
-                      <span className="text-sm text-white truncate">{c.name}</span>
+                      <span className="text-sm text-white truncate min-w-0">{c.name}</span>
                     </button>
                   ))}
 
@@ -1078,7 +1078,7 @@ export default function Home() {
                       className="w-full flex items-center gap-3 rounded-xl border border-dashed border-sky-500/40 bg-sky-500/5 px-4 py-3 text-left transition-all hover:border-sky-400 hover:bg-sky-500/10 active:scale-[0.98]"
                     >
                       <Plus className="h-4 w-4 text-sky-400 shrink-0" />
-                      <span className="text-sm text-sky-300">Créer &laquo;&nbsp;{enrichChantierSearch.trim()}&nbsp;&raquo;</span>
+                      <span className="text-sm text-sky-300 truncate min-w-0">Créer &laquo;&nbsp;{enrichChantierSearch.trim()}&nbsp;&raquo;</span>
                     </button>
                   )}
 
@@ -1092,9 +1092,9 @@ export default function Home() {
 
               {/* Selected chantier badge */}
               {selectedChantierObj && (
-                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5">
+                <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 min-w-0 overflow-hidden">
                   <MapPin className="h-4 w-4 text-sky-400 shrink-0" />
-                  <span className="text-sm font-medium text-sky-300 flex-1 truncate">{selectedChantierObj.name}</span>
+                  <span className="text-sm font-medium text-sky-300 flex-1 truncate min-w-0">{selectedChantierObj.name}</span>
                   <button type="button" onClick={() => { setEnrichSelectedChantier(null); setEnrichChantierSearch(""); }} className="text-slate-400 hover:text-white">
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -1403,14 +1403,14 @@ export default function Home() {
   const impacts = report?.impacts || [];
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6">
-      <div className="mx-auto w-full max-w-md space-y-4">
+    <main className="min-h-screen bg-slate-950 px-4 pb-12 pt-6 overflow-x-hidden">
+      <div className="mx-auto w-full max-w-md space-y-4 break-words">
 
         {/* ── TOP BAR: Status + Score ── */}
-        <div className="flex items-stretch gap-3 animate-scaleIn">
+        <div className="flex items-stretch gap-3 animate-scaleIn overflow-hidden">
           {/* Status badge */}
-          <div className={`flex-1 rounded-2xl border-2 px-4 py-3.5 text-center ${statutStyles[statutLevel]}`}>
-            <p className="text-base font-bold leading-tight">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
+          <div className={`flex-1 min-w-0 rounded-2xl border-2 px-4 py-3.5 text-center ${statutStyles[statutLevel]}`}>
+            <p className="text-base font-bold leading-tight truncate">{statutEmoji[statutLevel]} {statutLabel[statutLevel]}</p>
           </div>
           {/* Score */}
           {scoreValue && (
@@ -1436,7 +1436,7 @@ export default function Home() {
               <p className="text-xs font-semibold uppercase tracking-wider text-red-400">Alertes</p>
             </div>
             {alertes.map((a, i) => (
-              <p key={i} className="text-sm text-red-200 leading-relaxed">{a}</p>
+              <p key={i} className="text-sm text-red-200 leading-relaxed break-words">{a}</p>
             ))}
           </div>
         )}
@@ -1449,18 +1449,18 @@ export default function Home() {
         )}
 
         {/* Lieu + meta */}
-        <div className="flex items-center gap-3 animate-fadeIn stagger-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 animate-fadeIn stagger-1 overflow-hidden">
           {report?.lieu_chantier && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-400">
-              <MapPin className="h-3.5 w-3.5" />
-              {report.lieu_chantier}
+            <div className="flex items-center gap-1.5 text-sm text-slate-400 min-w-0 max-w-full">
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{report.lieu_chantier}</span>
             </div>
           )}
           {report?.equipe && (
-            <span className="text-xs text-slate-500">• {report.equipe}</span>
+            <span className="text-xs text-slate-500 truncate">• {report.equipe}</span>
           )}
           {report?.avancement && (
-            <span className="text-xs text-slate-500">• {report.avancement}</span>
+            <span className="text-xs text-slate-500 truncate">• {report.avancement}</span>
           )}
         </div>
 
@@ -1496,23 +1496,23 @@ export default function Home() {
                     </p>
                   </div>
                   {hasItems ? (
-                    <ul className="space-y-1.5">
+                    <ul className="space-y-1.5 overflow-hidden">
                       {section.items.map((item, i) => {
                         if (isProblemes) {
                           const { level, text } = parseSeverity(item);
                           return (
-                            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200">
+                            <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200 break-words overflow-hidden">
                               <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
                                 level === "critique" ? "bg-red-500" : level === "attention" ? "bg-amber-500" : "bg-slate-500"
                               }`} />
-                              {text}
+                              <span className="min-w-0">{text}</span>
                             </li>
                           );
                         }
                         return (
-                          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200">
+                          <li key={i} className="flex items-start gap-2 text-sm leading-relaxed text-slate-200 break-words overflow-hidden">
                             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500" />
-                            {item}
+                            <span className="min-w-0">{item}</span>
                           </li>
                         );
                       })}
@@ -1643,7 +1643,7 @@ export default function Home() {
           ) : (
             <Send className="h-4 w-4" />
           )}
-          {isSending ? "Envoi en cours..." : recipientEmail ? `Envoyer à ${recipientEmail.split("@")[0]}@…` : "Valider & Envoyer"}
+          <span className="truncate">{isSending ? "Envoi en cours..." : recipientEmail ? `Envoyer à ${recipientEmail.split("@")[0]}@…` : "Valider & Envoyer"}</span>
         </button>
 
         {/* Boutons secondaires */}
