@@ -143,660 +143,588 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "A4" });
   const PW = doc.internal.pageSize.getWidth();   // 210
   const PH = doc.internal.pageSize.getHeight();  // 297
-  const ML = 15;
-  const MR = 15;
-  const CW = PW - ML - MR; // 180
+  const ML = 18;
+  const MR = 18;
+  const CW = PW - ML - MR; // 174
 
   const today   = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const timeStr = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
-  // ── Color palette (R, G, B)
-  const NAVY:   [number, number, number] = [13,  43,  78 ]; // dark blue
-  const NAVY2:  [number, number, number] = [26,  82, 118]; // medium blue
-  const ORANGE: [number, number, number] = [230, 126, 34 ]; // accent orange
-  const GREEN:  [number, number, number] = [30, 132, 73 ]; // success green
-  const RED:    [number, number, number] = [192, 57,  43 ]; // danger red
-  const YELLOW: [number, number, number] = [243, 156, 18 ]; // warning yellow
-  const LGRAY:  [number, number, number] = [248, 249, 250]; // very light gray (body bg)
-  const BGRAY:  [number, number, number] = [218, 223, 228]; // border gray
-  const DGRAY:  [number, number, number] = [44,  62,  80 ]; // dark text
-  const MGRAY:  [number, number, number] = [127, 140, 141]; // muted text
-  const WHITE:  [number, number, number] = [255, 255, 255];
-  // Light tints for badges / item backgrounds
-  const GREEN_BG:  [number, number, number] = [234, 250, 241];
-  const RED_BG:    [number, number, number] = [253, 237, 236];
-  const YELLOW_BG: [number, number, number] = [253, 235, 208];
-  const BLUE_BG:   [number, number, number] = [235, 245, 251];
+  // ── Color palette (premium BTP design)
+  type RGB = [number, number, number];
+  const NAVY_900: RGB = [15, 30, 61];
+  const NAVY_700: RGB = [26, 47, 92];
+  const AMBER:    RGB = [232, 163, 48];
+  const AMBER_DK: RGB = [212, 137, 28];
+  const GREEN:    RGB = [26, 153, 96];
+  const RED:      RGB = [200, 52, 44];
+  const WHITE:    RGB = [255, 255, 255];
+  const DGRAY:    RGB = [44, 62, 80];
+  const MGRAY:    RGB = [127, 140, 141];
+  const LGRAY:    RGB = [248, 249, 250];
+  const BGRAY:    RGB = [218, 223, 228];
+  const GREEN_SOFT: RGB = [230, 247, 238];
+  const AMBER_SOFT: RGB = [253, 243, 226];
+  const RED_SOFT:   RGB = [253, 237, 236];
 
   let pageNum = 0;
-  let compact = false; // set to true when content overflows a single page
-  const PAGE_BOTTOM = PH - 18; // usable bottom limit (above footer)
-  const START_Y = logoDataUrl ? 42 : 34; // y position after header
+  const HERO_H = 58;
+  const HERO_H_P2 = 38;
+  const ACCENT_H = 4;
+  const PAGE_BOTTOM = PH - 16;
 
-  // ── Height estimation helper ─────────────────────────────────────────
-  function estimateSectionH(sectionItems: string[], isCompact: boolean): number {
-    const LH  = isCompact ? 3.8 : 5;
-    const P   = isCompact ? 3 : 5;
-    const IP  = isCompact ? 1.5 : 3;
-    const TH  = isCompact ? 7 : 9;
-    const GAP = isCompact ? 3 : 7;
-    const FS  = isCompact ? 7.5 : 9;
-    doc.setFontSize(FS);
-    let totalLines = 0;
-    for (const item of sectionItems) {
-      totalLines += (doc.splitTextToSize(item, CW - P * 2 - 6) as string[]).length;
-    }
-    if (sectionItems.length === 0) totalLines = 1;
-    const bodyH = Math.max(isCompact ? 8 : 12, totalLines * LH + P * 2 + sectionItems.length * IP);
-    return TH + bodyH + GAP;
-  }
-
-  // ── Page chrome — header band + footer line ──────────────────────────
-  function drawPageChrome() {
-    pageNum++;
-
-    const HEADER_H = logoDataUrl ? 36 : 28;
-
-    // Header band
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, PW, HEADER_H, "F");
-    // Orange bottom stripe of header
-    doc.setFillColor(...ORANGE);
-    doc.rect(0, HEADER_H, PW, 1.5, "F");
-    // Orange left accent
-    doc.setFillColor(...ORANGE);
-    doc.rect(0, 0, 4, HEADER_H, "F");
-
-    // Logo (top-left, aspect ratio preserved, inside header band)
-    let textOffsetX = ML + 6;
-    if (logoDataUrl) {
-      try {
-        const props = doc.getImageProperties(logoDataUrl);
-        const maxH  = HEADER_H - 8; // 28mm with 4mm top/bottom padding
-        let lh = maxH;
-        let lw = lh * (props.width / props.height);
-        if (lw > 40) { lw = 40; lh = lw * (props.height / props.width); }
-        const logoY = (HEADER_H - lh) / 2;
-        doc.addImage(logoDataUrl, "PNG", ML + 6, logoY, lw, lh);
-        textOffsetX = ML + 6 + lw + 5;
-      } catch {
-        console.warn("[PDF LOGO] Erreur d'insertion du logo dans le PDF.");
-      }
-    }
-
-    const titleY    = logoDataUrl ? HEADER_H / 2 - 2 : 12;
-    const subtitleY = logoDataUrl ? HEADER_H / 2 + 7  : 20;
-
-    // Title
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text("RAPPORT DE CHANTIER", textOffsetX, titleY);
-
-    // Subtitle
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...ORANGE);
-    doc.text("VoiceReport  -  Rapport vocal automatique BTP", textOffsetX, subtitleY);
-
-    // Date + page (top right)
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(175, 190, 205);
-    doc.text(today + "  |  " + timeStr, PW - MR, titleY, { align: "right" });
-    doc.text("Page " + pageNum, PW - MR, subtitleY, { align: "right" });
-
-    // Footer separator
+  // ── Draw footer on current page ────────────────────────────────────
+  function drawFooter(page: number) {
     doc.setDrawColor(...BGRAY);
     doc.setLineWidth(0.3);
-    doc.line(ML, PH - 12, PW - MR, PH - 12);
+    doc.line(ML, PH - 14, PW - MR, PH - 14);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MGRAY);
+    doc.text("VoiceReport \u2014 Le rapport chantier en 30 secondes", ML, PH - 8);
+    doc.text("Page " + page, PW - MR, PH - 8, { align: "right" });
+  }
 
-    // Footer text
+  // ── Draw diamond shape ─────────────────────────────────────────────
+  function drawDiamond(cx: number, cy: number, hw: number, hh: number, color: RGB) {
+    doc.setFillColor(...color);
+    doc.triangle(cx, cy - hh, cx - hw, cy, cx + hw, cy, "F");
+    doc.triangle(cx - hw, cy, cx + hw, cy, cx, cy + hh, "F");
+  }
+
+  // ── Page 1 Hero (large, with meta row) ─────────────────────────────
+  function drawPage1Hero(): number {
+    // Navy background
+    doc.setFillColor(...NAVY_900);
+    doc.rect(0, 0, PW, HERO_H, "F");
+
+    // Decorative navy-700 circles
+    doc.setFillColor(...NAVY_700);
+    doc.circle(PW - 15, 12, 25, "F");
+    doc.circle(PW - 45, -8, 15, "F");
+
+    // Amber accent bar below hero
+    doc.setFillColor(...AMBER);
+    doc.rect(0, HERO_H, PW, ACCENT_H, "F");
+
+    // Status pill (top right)
+    if (statutGlobal) {
+      const s = statutGlobal.toLowerCase();
+      let pillColor: RGB = GREEN;
+      let pillText = "En cours";
+      if (s.includes("bon") || s.includes("fluide")) { pillColor = GREEN; pillText = "Bon avancement"; }
+      else if (s.includes("difficulte") || s.includes("quelques")) { pillColor = AMBER; pillText = "Difficult\u00e9s"; }
+      else if (s.includes("critique") || s.includes("probleme")) { pillColor = RED; pillText = "Critique"; }
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      const pillW = doc.getTextWidth(pillText) + 14;
+      const pillX = PW - MR - pillW;
+      const pillY = 8;
+      doc.setFillColor(...pillColor);
+      doc.roundedRect(pillX, pillY, pillW, 7, 3.5, 3.5, "F");
+      doc.setFillColor(...WHITE);
+      doc.circle(pillX + 5, pillY + 3.5, 1.2, "F");
+      doc.setTextColor(...WHITE);
+      doc.text(pillText, pillX + 9, pillY + 5.2);
+    }
+
+    // Brand line
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...AMBER);
+    doc.text("\u2014  VOICEREPORT \u00b7 BTP", ML + 4, 20);
+
+    // Main title
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("Rapport de chantier", ML + 4, 34);
+
+    // Hero meta row
+    const metaY = 43;
+    const metaItems: { label: string; value: string }[] = [];
+    metaItems.push({ label: "Date", value: today });
+    if (lieu) metaItems.push({ label: "Chantier", value: lieu });
+    if (rapporteur) metaItems.push({ label: "Chef d'\u00e9quipe", value: rapporteur });
+    if (equipe) metaItems.push({ label: "\u00c9quipe", value: equipe });
+    if (meteo && metaItems.length < 4) metaItems.push({ label: "M\u00e9t\u00e9o", value: meteo });
+    if (avancement && metaItems.length < 4) metaItems.push({ label: "Avancement", value: avancement });
+    const mColW = (CW - 8) / Math.max(metaItems.length, 1);
+    for (let i = 0; i < metaItems.length; i++) {
+      const mx = ML + 4 + i * mColW;
+      doc.setFontSize(6.5);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...AMBER);
+      doc.text(metaItems[i].label, mx, metaY);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...WHITE);
+      const vl = doc.splitTextToSize(metaItems[i].value, mColW - 4);
+      doc.text(vl[0] || "", mx, metaY + 6);
+    }
+
+    return HERO_H + ACCENT_H;
+  }
+
+  // ── Continuation hero (page 2+) ───────────────────────────────────
+  function drawContinuationHero(brand?: string, title?: string): number {
+    doc.setFillColor(...NAVY_900);
+    doc.rect(0, 0, PW, HERO_H_P2, "F");
+    doc.setFillColor(...NAVY_700);
+    doc.circle(PW - 15, 8, 18, "F");
+    doc.setFillColor(...AMBER);
+    doc.rect(0, HERO_H_P2, PW, ACCENT_H, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...AMBER);
+    doc.text(brand || "\u2014  VOICEREPORT \u00b7 BTP", ML + 4, 16);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text(title || "Rapport de chantier (suite)", ML + 4, 28);
+    return HERO_H_P2 + ACCENT_H;
+  }
+
+  // ── Add new page with continuation hero ────────────────────────────
+  function newPage(): number {
+    doc.addPage();
+    pageNum++;
+    const sy = drawContinuationHero() + 8;
+    drawFooter(pageNum);
+    return sy;
+  }
+
+  // ── KPI Grid (3 columns with colored left border) ──────────────────
+  function drawKPIGrid(y: number): number {
+    const KPI_H = 22;
+    const GAP = 4;
+    const COL_W = (CW - GAP * 2) / 3;
+
+    const kpis: { label: string; value: string; border: RGB }[] = [];
+    kpis.push({ label: "Travaux", value: String(travaux.length), border: NAVY_700 });
+    kpis.push({ label: "Mat\u00e9riel", value: String(materiel.length), border: AMBER });
+    if (equipe) {
+      kpis.push({ label: "\u00c9quipe", value: equipe, border: GREEN });
+    } else {
+      kpis.push({ label: "Probl\u00e8mes", value: String(problemes.length), border: RED });
+    }
+
+    for (let i = 0; i < 3; i++) {
+      const kx = ML + i * (COL_W + GAP);
+      // White card
+      doc.setFillColor(...WHITE);
+      doc.roundedRect(kx, y, COL_W, KPI_H, 2, 2, "F");
+      doc.setDrawColor(...BGRAY);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(kx, y, COL_W, KPI_H, 2, 2, "S");
+      // Colored left accent
+      doc.setFillColor(...kpis[i].border);
+      doc.roundedRect(kx, y, 3, KPI_H, 2, 0, "F");
+      doc.rect(kx + 1.5, y, 1.5, KPI_H, "F");
+      // Value
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...DGRAY);
+      const valText = doc.splitTextToSize(kpis[i].value, COL_W - 12);
+      doc.text(valText[0] || kpis[i].value, kx + COL_W / 2 + 2, y + 10, { align: "center" });
+      // Label
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...MGRAY);
+      doc.text(kpis[i].label, kx + COL_W / 2 + 2, y + 17, { align: "center" });
+    }
+
+    return y + KPI_H + 6;
+  }
+
+  // ── Section block with items list ──────────────────────────────────
+  function drawSection(title: string, items: string[], y: number, sType: "travaux" | "problemes" | "materiel"): number {
+    const TITLE_H = 10;
+    const LINE_H = 5;
+    const ITEM_PAD = 3;
+    const PAD = 5;
+    const GAP = 6;
+    const FS = 9;
+
+    // Empty probl\u00e8mes -> green "Aucun incident" card
+    if (items.length === 0 && sType === "problemes") {
+      return drawNoIssuesCard(y);
+    }
+    if (items.length === 0) return y;
+
+    // Pre-compute item text wrapping
+    doc.setFontSize(FS);
+    const itemLines: string[][] = items.map(item =>
+      doc.splitTextToSize(item, CW - PAD * 2 - 14) as string[]
+    );
+
+    // Page break check for title + first item
+    const firstItemH = itemLines[0].length * LINE_H + ITEM_PAD;
+    if (y + TITLE_H + firstItemH + PAD * 2 > PAGE_BOTTOM) {
+      y = newPage();
+    }
+
+    // Section title with amber diamond icon
+    drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text(title, ML + 8, y + 7);
+
+    // Count badge
+    const countStr = String(items.length);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    const badgeW = doc.getTextWidth(countStr) + 6;
+    const badgeX = PW - MR - badgeW;
+    doc.setFillColor(...AMBER);
+    doc.roundedRect(badgeX, y + 2, badgeW, 6, 3, 3, "F");
+    doc.setTextColor(...WHITE);
+    doc.text(countStr, badgeX + badgeW / 2, y + 6.5, { align: "center" });
+    y += TITLE_H;
+
+    // Draw items
+    for (let idx = 0; idx < items.length; idx++) {
+      const lines = itemLines[idx];
+      const itemH = lines.length * LINE_H + ITEM_PAD;
+
+      // Page break within section
+      if (y + itemH > PAGE_BOTTOM) {
+        y = newPage();
+        drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...DGRAY);
+        doc.text(title + " (suite)", ML + 8, y + 7);
+        y += TITLE_H;
+      }
+
+      // Material items: amber soft background + badge
+      if (sType === "materiel") {
+        doc.setFillColor(...AMBER_SOFT);
+        doc.roundedRect(ML, y - 1, CW, itemH + 1, 1, 1, "F");
+        const bText = "\u00c0 commander";
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "bold");
+        const bw = doc.getTextWidth(bText) + 6;
+        doc.setFillColor(...AMBER);
+        doc.roundedRect(PW - MR - bw - 2, y + 1, bw, 5, 2.5, 2.5, "F");
+        doc.setTextColor(...WHITE);
+        doc.text(bText, PW - MR - bw / 2 - 2, y + 4.5, { align: "center" });
+      }
+
+      // Colored bullet
+      let bulletColor: RGB;
+      if (sType === "travaux") bulletColor = GREEN;
+      else if (sType === "problemes") bulletColor = RED;
+      else bulletColor = AMBER_DK;
+      doc.setFillColor(...bulletColor);
+      doc.circle(ML + 3, y + 3.5, 1.5, "F");
+
+      // Item text
+      doc.setFontSize(FS);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...DGRAY);
+      let ty = y + 4.5;
+      for (const line of lines) {
+        doc.text(line, ML + 10, ty);
+        ty += LINE_H;
+      }
+
+      // Dashed separator between items
+      if (idx < items.length - 1) {
+        doc.setDrawColor(...BGRAY);
+        doc.setLineWidth(0.2);
+        const dashLen = 2;
+        const gapLen = 2;
+        const lineY = y + itemH;
+        let dx = ML + 8;
+        while (dx < PW - MR) {
+          const dEnd = Math.min(dx + dashLen, PW - MR);
+          doc.line(dx, lineY, dEnd, lineY);
+          dx += dashLen + gapLen;
+        }
+      }
+
+      y += itemH;
+    }
+
+    return y + GAP;
+  }
+
+  // ── "Aucun incident" card (green soft) ─────────────────────────────
+  function drawNoIssuesCard(y: number): number {
+    const CARD_H = 14;
+    if (y + CARD_H + 6 > PAGE_BOTTOM) { y = newPage(); }
+
+    doc.setFillColor(...GREEN_SOFT);
+    doc.roundedRect(ML, y, CW, CARD_H, 2, 2, "F");
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, CARD_H, 2, 2, "S");
+
+    // Checkmark drawn with lines
+    const cx = ML + 7;
+    const cy = y + CARD_H / 2;
+    doc.setDrawColor(...GREEN);
+    doc.setLineWidth(0.8);
+    doc.line(cx - 2, cy, cx, cy + 2);
+    doc.line(cx, cy + 2, cx + 3, cy - 2);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...GREEN);
+    doc.text("Aucun incident signal\u00e9", ML + 14, y + CARD_H / 2 + 1.5);
+
+    return y + CARD_H + 6;
+  }
+
+  // ── Action card (navy bg with amber numbered list) ─────────────────
+  function drawActionCard(items: string[], y: number): number {
+    if (items.length === 0) return y;
+
+    // Pre-compute lines
+    doc.setFontSize(9);
+    const itemLines: string[][] = items.map(item =>
+      doc.splitTextToSize(item, CW - 26) as string[]
+    );
+    let totalLines = 0;
+    for (const lines of itemLines) totalLines += lines.length;
+    const cardH = totalLines * 5 + items.length * 3 + 22;
+
+    if (y + cardH > PAGE_BOTTOM) { y = newPage(); }
+
+    // Navy background card
+    doc.setFillColor(...NAVY_900);
+    doc.roundedRect(ML, y, CW, cardH, 3, 3, "F");
+
+    // Title
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("Actions prioritaires pour la reprise", ML + 10, y + 13);
+
+    // Numbered items
+    let iy = y + 22;
+    for (let i = 0; i < items.length; i++) {
+      // Amber number
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...AMBER);
+      doc.text(String(i + 1) + ".", ML + 10, iy + 4);
+
+      // White text
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...WHITE);
+      for (const line of itemLines[i]) {
+        doc.text(line, ML + 18, iy + 4);
+        iy += 5;
+      }
+      iy += 3;
+    }
+
+    return y + cardH + 6;
+  }
+
+  // ── Impact section (red left-border cards with RISQUE badge) ───────
+  function drawImpactSection(y: number): number {
+    if (impacts.length === 0) return y;
+
+    // Warning triangle icon
+    const tx = ML + 3;
+    const tiy = y + 5;
+    doc.setFillColor(...RED);
+    doc.triangle(tx, tiy - 3, tx - 2.5, tiy + 2, tx + 2.5, tiy + 2, "F");
+    doc.setFontSize(5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("!", tx, tiy + 1.2, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...RED);
+    doc.text("Impacts d\u00e9tect\u00e9s", ML + 9, y + 7);
+    y += 12;
+
+    for (const imp of impacts) {
+      const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
+      doc.setFontSize(9);
+      const lines = doc.splitTextToSize(cleanImp || imp, CW - 22) as string[];
+      const cardH = lines.length * 5 + 10;
+
+      if (y + cardH > PAGE_BOTTOM) { y = newPage(); }
+
+      // Red-bordered card
+      doc.setFillColor(...RED_SOFT);
+      doc.roundedRect(ML, y, CW, cardH, 2, 2, "F");
+      doc.setFillColor(...RED);
+      doc.roundedRect(ML, y, 3, cardH, 2, 0, "F");
+      doc.rect(ML + 1.5, y, 1.5, cardH, "F");
+
+      // "RISQUE" badge
+      doc.setFontSize(6);
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(...RED);
+      doc.roundedRect(ML + 8, y + 2, 16, 5, 2.5, 2.5, "F");
+      doc.setTextColor(...WHITE);
+      doc.text("RISQUE", ML + 16, y + 5.5, { align: "center" });
+
+      // Impact text
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...DGRAY);
+      let ly = y + 12;
+      for (const line of lines) {
+        doc.text(line, ML + 8, ly);
+        ly += 5;
+      }
+      y += cardH + 4;
+    }
+    return y + 4;
+  }
+
+  // ── Certification block (gray bg) ─────────────────────────────────
+  function drawCertBlock(y: number): number {
+    const BLOCK_H = 18;
+    if (y + BLOCK_H + 6 > PAGE_BOTTOM) { y = newPage(); }
+
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(ML, y, CW, BLOCK_H, 2, 2, "F");
+    doc.setDrawColor(...BGRAY);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, y, CW, BLOCK_H, 2, 2, "S");
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...DGRAY);
+    doc.text("Rapport g\u00e9n\u00e9r\u00e9 et certifi\u00e9 par VoiceReport", PW / 2, y + 7, { align: "center" });
+
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...MGRAY);
     doc.text(
-      "VoiceReport \u2014 Le rapport chantier en 30 secondes",
-      PW / 2,
-      PH - 6.5,
-      { align: "center" }
-    );
-  }
-
-  // ── Metadata info bar (dynamic columns based on available data) ─────
-  function drawMetaBar(y: number): number {
-    // Build columns from available data only
-    const columns: { label: string; value: string }[] = [];
-    columns.push({ label: "DATE DU RAPPORT", value: today });
-    if (rapporteur) columns.push({ label: "RAPPORT\u00c9 PAR", value: rapporteur });
-    if (lieu)       columns.push({ label: "CHANTIER", value: lieu });
-
-    if (columns.length === 0) return y;
-
-    const BAR_H = compact ? 16 : 20;
-    const COL   = CW / columns.length;
-
-    doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, BAR_H, 2, 2, "F");
-    doc.setDrawColor(...BGRAY);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, BAR_H, 2, 2, "S");
-
-    // Column dividers
-    for (let i = 1; i < columns.length; i++) {
-      doc.setDrawColor(...BGRAY);
-      doc.line(ML + i * COL, y + 3, ML + i * COL, y + BAR_H - 3);
-    }
-
-    for (let i = 0; i < columns.length; i++) {
-      const cx = ML + i * COL + COL / 2;
-      doc.setFontSize(compact ? 5.5 : 6.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...MGRAY);
-      doc.text(columns[i].label, cx, y + (compact ? 6.5 : 8), { align: "center" });
-
-      doc.setFontSize(compact ? 7.5 : 8.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...DGRAY);
-      const valLines = doc.splitTextToSize(columns[i].value, COL - 6);
-      doc.text(valLines.slice(0, 1), cx, y + (compact ? 12.5 : 15.5), { align: "center" });
-    }
-
-    return y + BAR_H + (compact ? 4 : 6);
-  }
-
-  // ── Statut global colored bar ─────────────────────────────────────────
-  function drawStatutBar(statut: string, y: number): number {
-    if (!statut) return y;
-    const BAR_H = compact ? 10 : 14;
-
-    const s = statut.toLowerCase();
-    let barColor: [number, number, number];
-    if (s.includes("bon") || s.includes("fluide")) {
-      barColor = GREEN;
-    } else if (s.includes("difficulte") || s.includes("quelques")) {
-      barColor = YELLOW;
-    } else if (s.includes("critique") || s.includes("probleme") || s.includes("situation")) {
-      barColor = RED;
-    } else {
-      barColor = MGRAY;
-    }
-
-    doc.setFillColor(...barColor);
-    doc.roundedRect(ML, y, CW, BAR_H, 2, 2, "F");
-
-    // Strip emojis using the shared sanitizer
-    const cleanText = sanitizeEmoji(statut);
-    doc.setFontSize(compact ? 9 : 11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text(cleanText || "Statut non d\u00e9fini", PW / 2, y + BAR_H / 2 + 1, { align: "center" });
-
-    return y + BAR_H + (compact ? 4 : 6);
-  }
-
-  // ── KPI badges row (only show badges with data, centered) ──────────
-  function drawKpiBadges(travauxN: number, problemesN: number, materielN: number, photosN: number, y: number): number {
-    const BADGE_H = compact ? 14 : 18;
-    const GAP  = compact ? 3 : 4;
-
-    // Only include badges that have meaningful data
-    const allBadges: { label: string; value: string; color: [number, number, number]; bg: [number, number, number] }[] = [];
-    if (travauxN > 0)  allBadges.push({ label: "TRAVAUX",   value: String(travauxN),   color: GREEN,                         bg: GREEN_BG });
-    if (problemesN > 0) allBadges.push({ label: "PROBLEMES", value: String(problemesN), color: RED,                           bg: RED_BG });
-    if (materielN > 0)  allBadges.push({ label: "MATERIEL",  value: String(materielN),  color: YELLOW,                        bg: YELLOW_BG });
-    if (equipe)         allBadges.push({ label: "EQUIPE",    value: equipe,             color: NAVY2,                         bg: BLUE_BG });
-    if (avancement)     allBadges.push({ label: "AVANCEMENT",value: avancement,         color: GREEN,                         bg: GREEN_BG });
-    if (photosN > 0)    allBadges.push({ label: "PHOTOS",    value: String(photosN),    color: NAVY2,                         bg: BLUE_BG });
-
-    if (allBadges.length === 0) return y;
-
-    const COLS = allBadges.length;
-    const BW   = (CW - GAP * Math.max(0, COLS - 1)) / COLS;
-
-    for (let i = 0; i < allBadges.length; i++) {
-      const bx = ML + i * (BW + GAP);
-      const b  = allBadges[i];
-
-      // Badge background
-      doc.setFillColor(...b.bg);
-      doc.roundedRect(bx, y, BW, BADGE_H, 2, 2, "F");
-
-      // Left color accent bar
-      doc.setFillColor(...b.color);
-      doc.roundedRect(bx, y, 3, BADGE_H, 2, 0, "F");
-      doc.rect(bx + 1.5, y, 1.5, BADGE_H, "F");
-
-      // Value (large)
-      doc.setFontSize(compact ? 11 : 14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...b.color);
-      doc.text(b.value, bx + BW / 2 + 2, y + (compact ? 7 : 9), { align: "center" });
-
-      // Label (small)
-      doc.setFontSize(compact ? 5 : 6);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...MGRAY);
-      doc.text(b.label, bx + BW / 2 + 2, y + (compact ? 12 : 15), { align: "center" });
-    }
-
-    return y + BADGE_H + (compact ? 4 : 6);
-  }
-
-  // ── Section block: title bar + color-coded bullet list ───────────────
-  // Supports compact mode and proper page-break splitting within sections
-  function drawSection(title: string, items: string[], y: number, sectionType?: "travaux" | "problemes" | "materiel" | "aprevoir"): number {
-    const TITLE_H       = compact ? 7 : 9;
-    const PAD           = compact ? 3 : 5;
-    const LINE_H        = compact ? 3.8 : 5;
-    const BULLET_INDENT = compact ? 5 : 6;
-    const ITEM_PAD      = compact ? 1.5 : 3;
-    const FONT_SIZE     = compact ? 7.5 : 9;
-    const TITLE_FONT    = compact ? 7 : 8.5;
-    const SECTION_GAP   = compact ? 3 : 7;
-    const BULLET_FS     = compact ? 4 : 5;
-
-    // Pre-calculate item lines + detect severity
-    doc.setFontSize(FONT_SIZE);
-    type ItemInfo = { lines: string[]; severity: "ok" | "warning" | "danger" | "neutral" };
-    const itemInfos: ItemInfo[] = [];
-
-    for (const item of items) {
-      const lines = doc.splitTextToSize(item, CW - PAD * 2 - BULLET_INDENT) as string[];
-      let severity: ItemInfo["severity"] = "neutral";
-
-      if (item.includes("[Critique]")) severity = "danger";
-      else if (item.includes("[Attention]")) severity = "warning";
-      else if (sectionType === "travaux") severity = "ok";
-      else if (sectionType === "problemes") severity = "warning";
-      else if (sectionType === "materiel") severity = "warning";
-
-      itemInfos.push({ lines, severity });
-    }
-
-    // ── Helper: draw section title bar ──
-    function drawSectionTitle(atY: number, continuation = false): number {
-      const label = continuation ? title + " (suite)" : title;
-      doc.setFillColor(...NAVY);
-      doc.roundedRect(ML, atY, CW, TITLE_H, 1.5, 1.5, "F");
-      doc.setFillColor(...ORANGE);
-      doc.rect(ML, atY, 4, TITLE_H, "F");
-      doc.setFontSize(TITLE_FONT);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...WHITE);
-      doc.text(label, ML + 9, atY + TITLE_H * 0.69);
-
-      // Item count badge
-      if (items.length > 0) {
-        const countStr = String(items.length);
-        doc.setFontSize(compact ? 6 : 7);
-        const cBw = doc.getTextWidth(countStr) + 5;
-        const cBx = PW - MR - cBw - 3;
-        doc.setFillColor(...ORANGE);
-        doc.roundedRect(cBx, atY + (TITLE_H - 5.5) / 2, cBw, 5.5, 1.5, 1.5, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...WHITE);
-        doc.text(countStr, cBx + cBw / 2, atY + TITLE_H / 2 + 1, { align: "center" });
-      }
-      return atY + TITLE_H;
-    }
-
-    // ── Helper: draw a single item at ty ──
-    function drawItem(info: ItemInfo, ty: number): number {
-      const rowH = info.lines.length * LINE_H + ITEM_PAD;
-
-      // Color-coded row background
-      if (info.severity === "danger") {
-        doc.setFillColor(...RED_BG);
-        doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
-      } else if (info.severity === "warning") {
-        doc.setFillColor(...YELLOW_BG);
-        doc.rect(ML + 1, ty - LINE_H + 1, CW - 2, rowH, "F");
-      }
-
-      // Colored indicator circle
-      let bulletColor: [number, number, number];
-      let bulletIcon = "";
-      switch (info.severity) {
-        case "danger":  bulletColor = RED;    bulletIcon = "!"; break;
-        case "warning": bulletColor = YELLOW; bulletIcon = "!"; break;
-        case "ok":      bulletColor = GREEN;  bulletIcon = ""; break;
-        default:        bulletColor = ORANGE; bulletIcon = "";
-      }
-      doc.setFillColor(...bulletColor);
-      doc.circle(ML + PAD + 1.5, ty - 1.2, 1.2, "F");
-
-      if (bulletIcon) {
-        doc.setFontSize(BULLET_FS);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...WHITE);
-        doc.text(bulletIcon, ML + PAD + 1.5, ty - 0.5, { align: "center" });
-      }
-
-      // Item text
-      doc.setFontSize(FONT_SIZE);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...DGRAY);
-      let lineY = ty;
-      for (const line of info.lines) {
-        doc.text(line, ML + PAD + BULLET_INDENT, lineY);
-        lineY += LINE_H;
-      }
-      return lineY + ITEM_PAD;
-    }
-
-    // ── Empty section (fast path) ──
-    if (items.length === 0) {
-      const emptyBodyH = compact ? 8 : 12;
-      const totalH = TITLE_H + emptyBodyH + SECTION_GAP;
-      if (y + totalH > PAGE_BOTTOM) {
-        doc.addPage(); drawPageChrome(); y = START_Y;
-      }
-      y = drawSectionTitle(y);
-      doc.setFillColor(...LGRAY);
-      doc.rect(ML, y, CW, emptyBodyH, "F");
-      doc.setDrawColor(...BGRAY);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(ML, y, CW, emptyBodyH, 1, 1, "S");
-      doc.setFontSize(FONT_SIZE);
-      doc.setFont("helvetica", "italic");
-      doc.setTextColor(...MGRAY);
-      doc.text("Rien \u00e0 signaler", ML + PAD, y + PAD + LINE_H - 1);
-      return y + emptyBodyH + SECTION_GAP;
-    }
-
-    // ── Calculate total height to check if single-page draw works ──
-    let totalBodyLines = 0;
-    for (const info of itemInfos) totalBodyLines += info.lines.length;
-    const fullBodyH = Math.max(compact ? 8 : 12, totalBodyLines * LINE_H + PAD * 2 + items.length * ITEM_PAD);
-    const fullTotalH = TITLE_H + fullBodyH + SECTION_GAP;
-
-    // ── Fast path: entire section fits on current page ──
-    if (y + fullTotalH <= PAGE_BOTTOM) {
-      y = drawSectionTitle(y);
-      // Body background
-      doc.setFillColor(...LGRAY);
-      doc.rect(ML, y, CW, fullBodyH, "F");
-      doc.setDrawColor(...BGRAY);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(ML, y, CW, fullBodyH, 1, 1, "S");
-      // Draw items
-      let ty = y + PAD + LINE_H - 1;
-      for (const info of itemInfos) {
-        ty = drawItem(info, ty);
-      }
-      return y + fullBodyH + SECTION_GAP;
-    }
-
-    // ── Slow path: section must split across pages ──
-    // Process items in page-sized chunks
-    let remaining = [...itemInfos];
-    let isFirst = true;
-
-    while (remaining.length > 0) {
-      // Ensure space for title + at least one item
-      const firstItemH = remaining[0].lines.length * LINE_H + ITEM_PAD + PAD * 2;
-      if (y + TITLE_H + firstItemH > PAGE_BOTTOM) {
-        doc.addPage(); drawPageChrome(); y = START_Y;
-      }
-
-      // Draw title
-      y = drawSectionTitle(y, !isFirst);
-      isFirst = false;
-
-      // Determine how many items fit on this page
-      const bodyTop = y;
-      let usedH = PAD * 2; // top + bottom padding
-      let chunkCount = 0;
-
-      for (let i = 0; i < remaining.length; i++) {
-        const itemH = remaining[i].lines.length * LINE_H + ITEM_PAD;
-        if (bodyTop + usedH + itemH > PAGE_BOTTOM && chunkCount > 0) break;
-        usedH += itemH;
-        chunkCount++;
-      }
-
-      // Draw body background for this chunk
-      const chunkBodyH = Math.max(compact ? 8 : 12, usedH);
-      doc.setFillColor(...LGRAY);
-      doc.rect(ML, bodyTop, CW, chunkBodyH, "F");
-      doc.setDrawColor(...BGRAY);
-      doc.setLineWidth(0.3);
-      doc.roundedRect(ML, bodyTop, CW, chunkBodyH, 1, 1, "S");
-
-      // Draw items in this chunk
-      let ty = bodyTop + PAD + LINE_H - 1;
-      const chunk = remaining.splice(0, chunkCount);
-      for (const info of chunk) {
-        ty = drawItem(info, ty);
-      }
-
-      y = bodyTop + chunkBodyH + SECTION_GAP;
-    }
-
-    return y;
-  }
-
-  // ── Signature / certification block ──────────────────────────────────
-  function drawSignatureBlock(y: number): number {
-    const BLOCK_H = compact ? 12 : 16;
-
-    if (y + BLOCK_H + 10 > PAGE_BOTTOM) {
-      doc.addPage();
-      drawPageChrome();
-      y = START_Y;
-    }
-
-    // Navy background with rounded corners
-    doc.setFillColor(...NAVY);
-    doc.roundedRect(ML, y, CW, BLOCK_H, 2, 2, "F");
-
-    // Centered certification text
-    doc.setFontSize(compact ? 6.5 : 7.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text(
-      "Rapport g\u00e9n\u00e9r\u00e9 et certifi\u00e9 par VoiceReport",
-      PW / 2,
-      y + BLOCK_H / 2 - 1,
-      { align: "center" }
-    );
-
-    // Date/time sub-line
-    doc.setFontSize(compact ? 5.5 : 6.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...ORANGE);
-    doc.text(
       today + " \u00e0 " + timeStr + "  |  R\u00e9f. VR-" + Date.now().toString(36).toUpperCase().slice(-6),
-      PW / 2,
-      y + BLOCK_H / 2 + (compact ? 4 : 5),
-      { align: "center" }
+      PW / 2, y + 13, { align: "center" }
     );
-
-    return y + BLOCK_H + (compact ? 4 : 6);
+    return y + BLOCK_H + 6;
   }
 
-  // ── Section title bar only (no body — used for photos heading) ───────
-  function drawTitleBar(title: string, y: number): number {
-    const TITLE_H = 9;
-    doc.setFillColor(...NAVY);
-    doc.roundedRect(ML, y, CW, TITLE_H, 1.5, 1.5, "F");
-    doc.setFillColor(...ORANGE);
-    doc.rect(ML, y, 4, TITLE_H, "F");
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text(title, ML + 9, y + 6.2);
-    return y + TITLE_H + 5;
-  }
+  // ── Photo grid (2-column layout with dashed borders) ───────────────
+  function drawPhotoGrid(y: number): number {
+    if (compressedPhotos.length === 0) return y;
+    const GRID_GAP = 4;
+    const COL_W = (CW - GRID_GAP) / 2;
 
-  // ── PAGE 1 — Report content ───────────────────────────────────────────
-  drawPageChrome();
-  let y = START_Y;
-
-  // ── Height estimation: determine if compact mode is needed ──
-  {
-    const available = PAGE_BOTTOM - y;
-    // Estimate fixed-height elements (normal mode)
-    const metaH   = 26;
-    const kpiH    = 24;
-    const statutH = statutGlobal ? 20 : 0;
-    const sepH    = 6;
-    const sigH    = 22;
-    const impH    = impacts.length > 0 ? (10 + impacts.length * 5 + 4) : 0;
-    const fixedH  = metaH + kpiH + statutH + sepH + sigH + impH;
-    // Estimate section heights (normal mode)
-    const sectH = estimateSectionH(travaux, false) + estimateSectionH(problemes, false)
-                + estimateSectionH(materiel, false) + estimateSectionH(aprevoir, false);
-    const totalNeeded = fixedH + sectH;
-    if (totalNeeded > available) {
-      compact = true;
-      console.log(`[PDF LAYOUT] Mode compact activé (besoin: ${totalNeeded.toFixed(0)}mm, dispo: ${available.toFixed(0)}mm)`);
-    } else {
-      console.log(`[PDF LAYOUT] Mode normal (besoin: ${totalNeeded.toFixed(0)}mm, dispo: ${available.toFixed(0)}mm)`);
-    }
-  }
-
-  y = drawMetaBar(y);
-
-  // KPI badges row (only badges with data)
-  y = drawKpiBadges(travaux.length, problemes.length, materiel.length, compressedPhotos.length, y);
-
-  // Statut global — colored banner
-  y = drawStatutBar(statutGlobal, y);
-
-  // Thin rule separator
-  doc.setDrawColor(...BGRAY);
-  doc.setLineWidth(0.3);
-  doc.line(ML, y, PW - MR, y);
-  y += compact ? 4 : 6;
-
-  // Always draw all 4 sections
-  y = drawSection("TRAVAUX R\u00c9ALIS\u00c9S",       travaux,   y, "travaux");
-  y = drawSection("PROBL\u00c8MES RENCONTR\u00c9S", problemes, y, "problemes");
-  y = drawSection("MAT\u00c9RIEL MANQUANT",      materiel,  y, "materiel");
-  y = drawSection("\u00c0 PR\u00c9VOIR / SUITE",      aprevoir,  y, "aprevoir");
-
-  // ── Impacts détectés (if any) ──
-  if (impacts.length > 0) {
-    const IPAD = compact ? 3 : 5;
-    const IMP_LINE_H = compact ? 3.5 : 4.5;
-    const IMP_FONT = compact ? 7 : 8.5;
-    // Check page space
-    const impactH = 12 + impacts.length * (IMP_LINE_H + 1);
-    if (y + impactH > PAGE_BOTTOM) { doc.addPage(); drawPageChrome(); y = START_Y; }
-
-    // Title bar
-    const IMP_TITLE_H = compact ? 6.5 : 8;
-    doc.setFillColor(255, 243, 224); // warm amber background
-    doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "F");
-    doc.setDrawColor(...ORANGE);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, IMP_TITLE_H, 1.5, 1.5, "S");
-    doc.setFontSize(compact ? 6.5 : 8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...ORANGE);
-    doc.text("IMPACTS D\u00c9TECT\u00c9S", ML + IPAD, y + (compact ? 4.5 : 5.5));
-    y += IMP_TITLE_H + 2;
-
-    // Items
-    doc.setFontSize(IMP_FONT);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...DGRAY);
-    for (const imp of impacts) {
-      const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
-      const lines = doc.splitTextToSize("\u2022 " + (cleanImp || imp), CW - IPAD * 2);
-      for (const line of lines) {
-        if (y + 5 > PAGE_BOTTOM) { doc.addPage(); drawPageChrome(); y = START_Y; }
-        doc.text(line, ML + IPAD, y + 3);
-        y += IMP_LINE_H;
+    // Helper: draw dashed rectangle
+    function dashedRect(rx: number, ry: number, rw: number, rh: number) {
+      doc.setDrawColor(...BGRAY);
+      doc.setLineWidth(0.4);
+      const d = 3, g = 2;
+      for (let px = rx; px < rx + rw; px += d + g) {
+        doc.line(px, ry, Math.min(px + d, rx + rw), ry);
+        doc.line(px, ry + rh, Math.min(px + d, rx + rw), ry + rh);
+      }
+      for (let py = ry; py < ry + rh; py += d + g) {
+        doc.line(rx, py, rx, Math.min(py + d, ry + rh));
+        doc.line(rx + rw, py, rx + rw, Math.min(py + d, ry + rh));
       }
     }
-    y += compact ? 2 : 4;
+
+    for (let i = 0; i < compressedPhotos.length; i += 2) {
+      let rowH = 70;
+      if (y + rowH + 10 > PAGE_BOTTOM) { y = newPage(); }
+
+      for (let j = 0; j < 2 && (i + j) < compressedPhotos.length; j++) {
+        const px = ML + j * (COL_W + GRID_GAP);
+        try {
+          const b64 = compressedPhotos[i + j].toString("base64");
+          const durl = "data:image/jpeg;base64," + b64;
+          const props = doc.getImageProperties(durl);
+          let iw = COL_W - 4;
+          let ih = iw * (props.height / props.width);
+          if (ih > 80) { ih = 80; iw = ih * (props.width / props.height); }
+          if (ih + 6 > rowH) rowH = ih + 6;
+
+          dashedRect(px, y, COL_W, ih + 4);
+          doc.addImage(durl, "JPEG", px + (COL_W - iw) / 2, y + 2, iw, ih);
+
+          const legend = photoLegends[i + j] || "";
+          if (legend) {
+            doc.setFontSize(7);
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(...MGRAY);
+            const legLines = doc.splitTextToSize(legend, COL_W - 4);
+            doc.text(legLines[0] || "", px + 2, y + ih + 10);
+          }
+        } catch {
+          dashedRect(px, y, COL_W, 60);
+          doc.setFontSize(8);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(...MGRAY);
+          doc.text("Photo indisponible", px + COL_W / 2, y + 30, { align: "center" });
+          if (64 > rowH) rowH = 64;
+        }
+      }
+      y += rowH + 4;
+    }
+    return y + 4;
   }
 
-  // Certification signature block
-  y = drawSignatureBlock(y);
+  // ══════════════════════════════════════════════════════════════════════
+  // PAGE 1 \u2014 Report content
+  // ══════════════════════════════════════════════════════════════════════
+  pageNum = 1;
+  let y = drawPage1Hero() + 8;
+  drawFooter(pageNum);
 
-  // ── PAGE 2 — Photos (large, one per row) ──────────────────────────
-  // Only create photo page if there are photos
-  if (compressedPhotos.length > 0) {
+  // KPI Grid
+  y = drawKPIGrid(y);
+
+  // Sections (travaux, probl\u00e8mes, mat\u00e9riel on page 1)
+  y = drawSection("Travaux r\u00e9alis\u00e9s", travaux, y, "travaux");
+  y = drawSection("Probl\u00e8mes rencontr\u00e9s", problemes, y, "problemes");
+  y = drawSection("Mat\u00e9riel manquant", materiel, y, "materiel");
+
+  // ══════════════════════════════════════════════════════════════════════
+  // PAGE 2+ \u2014 Actions, Impacts, Photos, Certification
+  // ══════════════════════════════════════════════════════════════════════
+  const needsPage2 = aprevoir.length > 0 || impacts.length > 0 || compressedPhotos.length > 0;
+
+  if (needsPage2) {
     doc.addPage();
-    drawPageChrome();
-    y = START_Y;
+    pageNum++;
+    y = drawContinuationHero(
+      "\u2014  Suite \u00b7 Photos & actions",
+      "Plan d'action & visuels du chantier"
+    ) + 8;
+    drawFooter(pageNum);
 
-    y = drawTitleBar("ANNEXES VISUELLES - PHOTOS DU CHANTIER", y);
+    // Actions prioritaires (formerly "\u00c0 pr\u00e9voir")
+    y = drawActionCard(aprevoir, y);
 
-    const PHOTO_MAX_H = 190; // max height per photo in mm
-    const LEGEND_H = 14;
-    const PHOTO_MIN_H = 50; // minimum photo height
+    // Impacts
+    y = drawImpactSection(y);
 
-    for (let i = 0; i < compressedPhotos.length; i++) {
-      // Check if we need a new page (at least PHOTO_MIN_H available)
-      if (y + PHOTO_MIN_H > PAGE_BOTTOM) {
-        doc.addPage();
-        drawPageChrome();
-        y = START_Y;
-      }
-
-      // Photo label
-      doc.setFontSize(7);
+    // Photos
+    if (compressedPhotos.length > 0) {
+      drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(...MGRAY);
-      doc.text("Photo " + (i + 1) + " / " + compressedPhotos.length, ML + 3, y + 5);
-      y += 8;
-
-      try {
-        const b64   = compressedPhotos[i].toString("base64");
-        const durl  = "data:image/jpeg;base64," + b64;
-        console.log(`[PDF PHOTOS] Insertion image ${i + 1} - taille buffer: ${compressedPhotos[i].length} bytes`);
-        const props = doc.getImageProperties(durl);
-        console.log(`[PDF PHOTOS] Dimensions originales: ${props.width}x${props.height}`);
-        
-        // Scale to full content width, respecting aspect ratio and max height
-        const availH = PAGE_BOTTOM - y - LEGEND_H - 5;
-        const maxH = Math.max(PHOTO_MIN_H, Math.min(PHOTO_MAX_H, availH));
-        let iw = CW;
-        let ih = iw * (props.height / props.width);
-        if (ih > maxH) { ih = maxH; iw = ih * (props.width / props.height); }
-        console.log(`[PDF PHOTOS] Dimensions rendues: ${iw.toFixed(1)}x${ih.toFixed(1)}mm`);
-
-        // Photo frame
-        doc.setFillColor(...LGRAY);
-        doc.roundedRect(ML, y, CW, ih + 4, 2, 2, "F");
-        doc.setDrawColor(...BGRAY);
-        doc.setLineWidth(0.4);
-        doc.roundedRect(ML, y, CW, ih + 4, 2, 2, "S");
-
-        // Center image
-        doc.addImage(durl, "JPEG", ML + (CW - iw) / 2, y + 2, iw, ih);
-        console.log(`[PDF PHOTOS] Image ${i + 1} ins\u00e9r\u00e9e avec succ\u00e8s`);
-        y += ih + 6;
-      } catch (photoErr) {
-        console.error(`[PDF PHOTOS] Erreur lors de l'insertion de l'image ${i + 1}:`, photoErr);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(...MGRAY);
-        doc.text("Erreur d'affichage", PW / 2, y + 15, { align: "center" });
-        y += 30;
-      }
-
-      // Photo legend / caption
-      const legend = photoLegends[i] || "";
-      if (legend) {
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(...DGRAY);
-        const legendLines = doc.splitTextToSize(legend, CW - 8);
-        doc.text(legendLines.slice(0, 2), ML + 3, y + 2);
-        y += LEGEND_H;
-      } else {
-        y += 4;
-      }
+      doc.setTextColor(...DGRAY);
+      doc.text("Visuels du chantier", ML + 8, y + 7);
+      y += 14;
+      y = drawPhotoGrid(y);
     }
+
+    // Certification
+    y = drawCertBlock(y);
+  } else {
+    // Certification on page 1
+    y = drawCertBlock(y);
   }
 
-  // ── Convert to Buffer
+  // ── Convert to buffer
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
   console.log(`[PDF GENERATION] PDF OK - ${(pdfBuffer.length / 1024).toFixed(0)}KB`);
   console.log(`[PDF GENERATION] ========== GENERATION COMPLETE ==========`);
