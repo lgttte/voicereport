@@ -103,18 +103,11 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       .replace(/\s{2,}/g, " ")
       .trim();
 
-  // Fusionne Problèmes et Matériel pour "Points Critiques"
+  // 4 rubriques distinctes, aucun mélange
   const travaux   = toArray(reportData.travaux_realises).map(sanitizeEmoji);
+  const problemes = toArray(reportData.problemes_rencontres).map(sanitizeEmoji);
   const materiel  = toArray(reportData.materiel_manquant).map(sanitizeEmoji);
-  const problemes = [
-    ...toArray(reportData.problemes_rencontres),
-    ...materiel
-  ].map(sanitizeEmoji);
-  // Fusionne À prévoir, Alertes et Recommandations pour "Plan d'action & Suite"
-  const planAction = [
-    ...toArray(reportData.a_prevoir),
-    ...(Array.isArray((reportData as Record<string, unknown>).recommandations) ? toArray((reportData as Record<string, unknown>).recommandations) : [])
-  ].map(sanitizeEmoji);
+  const aPrevoir  = toArray(reportData.a_prevoir).map(sanitizeEmoji);
 
   // Optional fields — undefined if not provided (never show placeholders)
   const optStr = (v: unknown): string | undefined => {
@@ -557,10 +550,14 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.line(cx - 2, cy, cx, cy + 2);
     doc.line(cx, cy + 2, cx + 3, cy - 2);
 
+    let emptyText = "Rien \u00e0 signaler";
+    if (sType === "problemes") emptyText = "Aucun probl\u00e8me signal\u00e9";
+    else if (sType === "materiel") emptyText = "Aucun mat\u00e9riel manquant";
+    else if (sType === "aprevoir") emptyText = "Aucune action \u00e0 pr\u00e9voir";
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...GREEN);
-    doc.text("Rien \u00e0 signaler", ML + 14, y + CARD_H / 2 + 1.5);
+    doc.text(emptyText, ML + 14, y + CARD_H / 2 + 1.5);
 
     return y + CARD_H + 6;
   }
@@ -788,40 +785,11 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   // ── KPIs (compteurs visuels : Travaux / Incidents / Matériel)
   y = drawKPIGrid(y);
 
-  // ── Section Travaux réalisés
-  y = drawSection("Travaux r\u00e9alis\u00e9s", travaux, y, "travaux");
-
-  // ── Section Incidents & Matériel
-  y = drawSection("Incidents & Mat\u00e9riel", problemes, y, "problemes");
-
-  // ── Section Plan d'action & Suite (coule en page 2 si nécessaire, jamais forcé)
-  if (y + 18 > PAGE_BOTTOM) {
-    y = newPage();
-  } else {
-    y += 4;
-  }
-  drawDiamond(ML + 2.5, y + 5, 2, 2.5, NAVY_700);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DGRAY);
-  doc.text("Plan d\u2019action & Suite", ML + 8, y + 7);
-  y += 12;
-
-  if (planAction.length > 0) {
-    y = drawActionCard(planAction, y);
-  } else {
-    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
-    doc.setFillColor(...GREEN_SOFT);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
-    doc.setDrawColor(...GREEN);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...GREEN);
-    doc.text("Aucune action prioritaire requise.", ML + 14, y + 10);
-    y += 22;
-  }
+  // ── 4 rubriques obligatoires dans l'ordre, toujours affichées
+  y = drawSection("Travaux r\u00e9alis\u00e9s",    travaux,   y, "travaux");
+  y = drawSection("Probl\u00e8mes rencontr\u00e9s", problemes, y, "problemes");
+  y = drawSection("Mat\u00e9riel manquant",         materiel,  y, "materiel");
+  y = drawSection("\u00c0 pr\u00e9voir",            aPrevoir,  y, "aprevoir");
 
   // ── Impacts (si présents)
   y = drawImpactSection(y);

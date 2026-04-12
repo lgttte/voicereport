@@ -284,7 +284,6 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [showEmailEdit, setShowEmailEdit] = useState(false);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
   const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
   const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
@@ -1513,27 +1512,15 @@ export default function Home() {
           <div className="rv-email-ico">
             <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           </div>
-          {!showEmailEdit ? (
-            <>
-              <div className="rv-email-info">
-                <div className="rv-email-lbl">Destinataire</div>
-                <div className="rv-email-val">{recipientEmail || "Non défini"}</div>
-              </div>
-              <button type="button" className="rv-email-edit" onClick={() => setShowEmailEdit(true)}>Modifier</button>
-            </>
-          ) : (
-            <div className="rv-email-input-wrap">
-              <input
-                type="email"
-                value={recipientEmail}
-                onChange={(event) => setRecipientEmail(event.target.value)}
-                onBlur={() => { if (recipientEmail) setShowEmailEdit(false); }}
-                className="rv-email-input"
-                placeholder="patron@entreprise.fr"
-                autoFocus
-              />
-            </div>
-          )}
+          <div className="rv-email-input-wrap">
+            <input
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              className="rv-email-input"
+              placeholder="Entrez l'adresse email du destinataire..."
+            />
+          </div>
         </div>
 
         {/* Secondary buttons */}
