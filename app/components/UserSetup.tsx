@@ -61,7 +61,6 @@ export default function UserSetup({ onComplete }: { onComplete: (user: UserProfi
 
   return (
     <div className="ob-body">
-      <div className="ob-orb ob-orb-1" />
       <div className="ob-orb ob-orb-2" />
       <div className="ob-orb ob-orb-3" />
 
