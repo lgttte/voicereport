@@ -748,30 +748,59 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   }
 
   // ══════════════════════════════════════════════════════════════════════
-  // PAGE 1 — Vue d'ensemble & Terrain
+  // RENDU — 1 à 2 pages max, structure propre, aucun doublon
+  // ══════════════════════════════════════════════════════════════════════
   pageNum = 1;
   let y = drawPage1Hero() + 8;
   drawFooter(pageNum);
-  // Résumé visuel (pastilles, score)
-  y = drawSummaryRow(y);
-  // Travaux réalisés
-  y = drawSection("Travaux réalisés", travaux, y, "travaux");
-  // Points critiques (fusion Problèmes + Matériel)
-  y = drawSection("Incidents & Matériel", problemes, y, "problemes");
 
-  // PAGE 2 : Suivi & Visuels
-  doc.addPage();
-  pageNum++;
-  y = drawContinuationHero(
-    "—  SUIVI & VISUELS · BTP",
-    "Plan d'action & Suite"
-  ) + 8;
-  drawFooter(pageNum);
-  // Plan d'action (fusionné)
+  // ── Pastilles de statut + score
+  y = drawSummaryRow(y);
+
+  // ── Synthèse (bloc gris si disponible)
+  if (synthese) {
+    if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
+    const synLines = doc.splitTextToSize(synthese, CW - 20) as string[];
+    const synH = synLines.length * 5 + 12;
+    doc.setFillColor(...LGRAY);
+    doc.roundedRect(ML, y, CW, synH, 2, 2, "F");
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(...DGRAY);
+    let sy = y + 8;
+    for (const line of synLines) {
+      doc.text(line, ML + 10, sy);
+      sy += 5;
+    }
+    y += synH + 6;
+  }
+
+  // ── KPIs (compteurs visuels : Travaux / Incidents / Matériel)
+  y = drawKPIGrid(y);
+
+  // ── Section Travaux réalisés
+  y = drawSection("Travaux r\u00e9alis\u00e9s", travaux, y, "travaux");
+
+  // ── Section Incidents & Matériel
+  y = drawSection("Incidents & Mat\u00e9riel", problemes, y, "problemes");
+
+  // ── Section Plan d'action & Suite (coule en page 2 si nécessaire, jamais forcé)
+  if (y + 18 > PAGE_BOTTOM) {
+    y = newPage();
+  } else {
+    y += 4;
+  }
+  drawDiamond(ML + 2.5, y + 5, 2, 2.5, NAVY_700);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...DGRAY);
+  doc.text("Plan d\u2019action & Suite", ML + 8, y + 7);
+  y += 12;
+
   if (planAction.length > 0) {
     y = drawActionCard(planAction, y);
   } else {
-    if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
+    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
     doc.setFillColor(...GREEN_SOFT);
     doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
     doc.setDrawColor(...GREEN);
@@ -780,155 +809,29 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...GREEN);
-    doc.text("Aucune action prioritaire requise", ML + 14, y + 10);
+    doc.text("Aucune action prioritaire requise.", ML + 14, y + 10);
     y += 22;
   }
-  // Impacts (inchangé)
+
+  // ── Impacts (si présents)
   y = drawImpactSection(y);
-  // Galerie photos
+
+  // ── Photos du chantier (si présentes)
   if (compressedPhotos.length > 0) {
     if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
     drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...DGRAY);
     doc.text("Photos du chantier", ML + 8, y + 7);
     y += 14;
     y = drawPhotoGrid(y);
   }
-  // Certification (inchangé)
+
+  // ── Certification
   y = drawCertBlock(y);
 
-  // ══════════════════════════════════════════════════════════════════════
-  // PAGE 2+ \u2014 Plan d'action, Impacts, Photos, Certification
-  // ══════════════════════════════════════════════════════════════════════
-  const hasActions = planAction.length > 0;
-  const hasImpacts = impacts.length > 0;
-  const hasPhotos = compressedPhotos.length > 0;
-
-
-  // Always generate page 2 for plan d'action
-  doc.addPage();
-  pageNum++;
-  y = drawContinuationHero(
-    "\u2014  PLAN D'ACTION \u00b7 BTP",
-    "Plan d'action & recommandations"
-  ) + 8;
-  drawFooter(pageNum);
-
-  // Score recap on page 2
-  if (score !== null) {
-    if (y + 18 > PAGE_BOTTOM) { y = newPage(); }
-    doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
-    doc.setDrawColor(...BGRAY);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DGRAY);
-    doc.text("Note du chantier :", ML + 8, y + 10);
-    let scoreColor: RGB = GREEN;
-    if (score < 5) scoreColor = RED;
-    else if (score < 7) scoreColor = AMBER;
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...scoreColor);
-    doc.text(score + " / 10", ML + 52, y + 11);
-    // Status label
-    let noteLabel = "Excellent";
-    if (score < 5) noteLabel = "Critique - Actions urgentes requises";
-    else if (score < 7) noteLabel = "Correct - Am\u00e9liorations n\u00e9cessaires";
-    else if (score < 9) noteLabel = "Bon d\u00e9roulement";
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...MGRAY);
-    doc.text(noteLabel, ML + 80, y + 11);
-    y += 22;
-  }
-
-  // Actions imm\u00e9diates
-  if (hasActions) {
-    y = drawActionCard(planAction, y);
-  } else {
-    // Even without actions, show a clean card
-    if (y + 22 > PAGE_BOTTOM) { y = newPage(); }
-    doc.setFillColor(...GREEN_SOFT);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "F");
-    doc.setDrawColor(...GREEN);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, y, CW, 16, 2, 2, "S");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...GREEN);
-    doc.text("Aucune action prioritaire requise", ML + 14, y + 10);
-    y += 22;
-  }
-
-  // Conseils de gestion pour le patron
-  if (y + 40 > PAGE_BOTTOM) { y = newPage(); }
-  drawDiamond(ML + 2.5, y + 5, 2, 2.5, NAVY_700);
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...DGRAY);
-  doc.text("Recommandations de gestion", ML + 8, y + 7);
-  y += 12;
-
-  // Build dynamic recommendations
-  const recommendations: string[] = [];
-  if (problemes.length > 0) recommendations.push("Planifier une r\u00e9union d'\u00e9quipe pour traiter les " + problemes.length + " probl\u00e8me(s) identifi\u00e9(s)");
-  if (materiel.length > 0) recommendations.push("Passer commande du mat\u00e9riel manquant (" + materiel.length + " \u00e9l\u00e9ment(s)) pour \u00e9viter les retards");
-
-  if (score !== null && score < 7) recommendations.push("Note en dessous de 7/10 : identifier les causes principales et am\u00e9liorer les conditions de travail");
-  if (travaux.length > 0) recommendations.push("Valider les " + travaux.length + " t\u00e2che(s) r\u00e9alis\u00e9e(s) et mettre \u00e0 jour le planning");
-  if (recommendations.length === 0) recommendations.push("Chantier en bon \u00e9tat - poursuivre dans les conditions actuelles");
-
-  for (let i = 0; i < recommendations.length; i++) {
-    doc.setFontSize(9);
-    const recLines = doc.splitTextToSize(recommendations[i], CW - 18) as string[];
-    const recH = recLines.length * 5 + 6;
-    if (y + recH > PAGE_BOTTOM) { y = newPage(); }
-    doc.setFillColor(...LGRAY);
-    doc.roundedRect(ML, y, CW, recH, 1.5, 1.5, "F");
-    // Numbered circle
-    doc.setFillColor(...NAVY_700);
-    doc.circle(ML + 7, y + recH / 2, 3, "F");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...WHITE);
-    doc.text(String(i + 1), ML + 7, y + recH / 2 + 1.5, { align: "center" });
-    // Text
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...DGRAY);
-    let ry = y + 5;
-    for (const line of recLines) {
-      doc.text(line, ML + 14, ry + 2);
-      ry += 5;
-    }
-    y += recH + 3;
-  }
-  y += 4;
-
-  // Impacts
-  y = drawImpactSection(y);
-
-  // Photos
-  if (hasPhotos) {
-    if (y + 20 > PAGE_BOTTOM) { y = newPage(); }
-    drawDiamond(ML + 2.5, y + 5, 2, 2.5, AMBER);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...DGRAY);
-    doc.text("Visuels du chantier", ML + 8, y + 7);
-    y += 14;
-    y = drawPhotoGrid(y);
-  }
-
-  // Certification
-  y = drawCertBlock(y);
-
-  // ── Convert to buffer
+  // ── Conversion en buffer
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
   console.log(`[PDF GENERATION] PDF OK - ${(pdfBuffer.length / 1024).toFixed(0)}KB`);
   console.log(`[PDF GENERATION] ========== GENERATION COMPLETE ==========`);
