@@ -250,14 +250,24 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFillColor(...AMBER);
     doc.rect(0, HERO_H, PW, ACCENT_H, "F");
 
-    // Status pill (top right)
-    if (statutGlobal) {
-      const s = statutGlobal.toLowerCase();
+    // Status pill (top right) — priorité au score sur le texte brut
+    if (statutGlobal || score !== null) {
       let pillColor: RGB = GREEN;
       let pillText = "En cours";
-      if (s.includes("bon") || s.includes("fluide")) { pillColor = GREEN; pillText = "Bon d\u00e9roulement"; }
-      else if (s.includes("difficulte") || s.includes("quelques")) { pillColor = AMBER; pillText = "Difficult\u00e9s"; }
-      else if (s.includes("critique") || s.includes("probleme")) { pillColor = RED; pillText = "Critique"; }
+      if (score !== null) {
+        // Le score est la source de vérité
+        if (score >= 9)      { pillColor = GREEN;    pillText = "Excellent"; }
+        else if (score >= 7) { pillColor = GREEN;    pillText = "Bon d\u00e9roulement"; }
+        else if (score >= 5) { pillColor = AMBER;    pillText = "Quelques difficult\u00e9s"; }
+        else if (score >= 3) { pillColor = RED;      pillText = "Situation difficile"; }
+        else                 { pillColor = RED;      pillText = "Critique"; }
+      } else if (statutGlobal) {
+        // Fallback texte si pas de score
+        const s = statutGlobal.toLowerCase();
+        if (s.includes("bon") || s.includes("fluide") || s.includes("excel")) { pillColor = GREEN; pillText = "Bon d\u00e9roulement"; }
+        else if (s.includes("difficulte") || s.includes("quelques"))          { pillColor = AMBER; pillText = "Difficult\u00e9s"; }
+        else if (s.includes("critique") || s.includes("probleme"))            { pillColor = RED;   pillText = "Critique"; }
+      }
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       const pillTextW = doc.getTextWidth(pillText);
