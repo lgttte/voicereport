@@ -58,20 +58,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     // ...existing code...
     // (après l'init de reportData, toArray et sanitizeEmoji)
     // ...
-    // Fusionne Problèmes et Matériel pour "Points Critiques"
-    const travaux   = toArray(reportData.travaux_realises).map(sanitizeEmoji);
-    const problemes = [
-      ...toArray(reportData.problemes_rencontres),
-      ...toArray(reportData.materiel_manquant)
-    ].map(sanitizeEmoji);
-    // Fusionne À prévoir, Alertes et Recommandations pour "Plan d'action & Suite"
-    const planAction = [
-      ...toArray(reportData.a_prevoir),
-      ...toArray((reportData as Record<string, unknown>).alertes),
-      ...(Array.isArray((reportData as Record<string, unknown>).recommandations) ? toArray((reportData as Record<string, unknown>).recommandations) : [])
-    ].map(sanitizeEmoji);
-    // Déclaration correcte de alertes (après tout le reste)
-    const alertes = toArray((reportData as Record<string, unknown>).alertes).map(sanitizeEmoji);
+  // ...existing code...
   // ...existing code...
   // ── Parse the JSON report safely
   type ReportData = {
