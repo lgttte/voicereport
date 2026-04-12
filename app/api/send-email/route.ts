@@ -105,9 +105,10 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // Fusionne Problèmes et Matériel pour "Points Critiques"
   const travaux   = toArray(reportData.travaux_realises).map(sanitizeEmoji);
+  const materiel  = toArray(reportData.materiel_manquant).map(sanitizeEmoji);
   const problemes = [
     ...toArray(reportData.problemes_rencontres),
-    ...toArray(reportData.materiel_manquant)
+    ...materiel
   ].map(sanitizeEmoji);
   // Fusionne À prévoir, Alertes et Recommandations pour "Plan d'action & Suite"
   const planAction = [
