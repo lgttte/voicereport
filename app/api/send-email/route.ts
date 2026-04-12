@@ -112,7 +112,6 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   // Fusionne À prévoir, Alertes et Recommandations pour "Plan d'action & Suite"
   const planAction = [
     ...toArray(reportData.a_prevoir),
-    ...toArray((reportData as Record<string, unknown>).alertes),
     ...(Array.isArray((reportData as Record<string, unknown>).recommandations) ? toArray((reportData as Record<string, unknown>).recommandations) : [])
   ].map(sanitizeEmoji);
 
@@ -805,7 +804,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const hasActions = planAction.length > 0;
   const hasImpacts = impacts.length > 0;
   const hasPhotos = compressedPhotos.length > 0;
-  const hasAlertesForP2 = alertes.length > 0;
+
 
   // Always generate page 2 for plan d'action
   doc.addPage();
@@ -878,7 +877,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   const recommendations: string[] = [];
   if (problemes.length > 0) recommendations.push("Planifier une r\u00e9union d'\u00e9quipe pour traiter les " + problemes.length + " probl\u00e8me(s) identifi\u00e9(s)");
   if (materiel.length > 0) recommendations.push("Passer commande du mat\u00e9riel manquant (" + materiel.length + " \u00e9l\u00e9ment(s)) pour \u00e9viter les retards");
-  if (hasAlertesForP2) recommendations.push("V\u00e9rifier les alertes signal\u00e9es et prendre les mesures correctives");
+
   if (score !== null && score < 7) recommendations.push("Note en dessous de 7/10 : identifier les causes principales et am\u00e9liorer les conditions de travail");
   if (travaux.length > 0) recommendations.push("Valider les " + travaux.length + " t\u00e2che(s) r\u00e9alis\u00e9e(s) et mettre \u00e0 jour le planning");
   if (recommendations.length === 0) recommendations.push("Chantier en bon \u00e9tat - poursuivre dans les conditions actuelles");
