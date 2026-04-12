@@ -55,9 +55,6 @@ async function compressImage(file: File): Promise<Buffer> {
  */
 async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], photoLegends: string[]): Promise<Buffer> {
   // ...existing code...
-  // (déclaration déplacée plus bas)
-    // ...existing code...
-    const alertes = toArray((reportData as Record<string, unknown>).alertes).map(sanitizeEmoji);
   // ── Parse the JSON report safely
   type ReportData = {
     statut_global?: string;
