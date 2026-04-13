@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  invite_code String   @unique
+  createdAt   DateTime @default(now())
+  workers     Worker[]
+  reports     Report[]
+}
+
+model Worker {
+  device_id  String   @id
+  name       String
+  company_id String
+  createdAt  DateTime @default(now())
+  company    Company  @relation(fields: [company_id], references: [id])
+  reports    Report[]
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  company_id String
+  worker_id  String
+  date       DateTime @default(now())
+  data       String
+  score      Int?
+  status     String?
+  chantier   String?
+  company    Company  @relation(fields: [company_id], references: [id])
+  worker     Worker   @relation(fields: [worker_id], references: [device_id])
+}
