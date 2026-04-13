@@ -8,7 +8,6 @@ function createPrismaClient() {
       "[DB] DATABASE_URL est manquante. Ajoutez-la dans .env.local (local) ou dans les variables d'environnement Vercel (production)."
     );
   }
-  console.log("[DB] Connexion PostgreSQL initialisée");
   const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
