@@ -32,8 +32,9 @@ export default function CompanyRegister() {
       }
 
       setCreated(data);
-    } catch {
-      setError("Erreur réseau.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Erreur réseau : ${msg}`);
       setLoading(false);
     }
   };

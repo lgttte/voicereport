@@ -4,8 +4,11 @@ import { createClient } from "@libsql/client";
 import path from "path";
 
 function createPrismaClient() {
-  const dbPath = path.join(process.cwd(), "prisma", "dev.db");
-  const libsql = createClient({ url: `file:${dbPath}` });
+  // On Windows, path.join returns backslashes — libsql requires forward slashes
+  const dbPath = path.join(process.cwd(), "prisma", "dev.db").replace(/\\/g, "/");
+  const url = `file:${dbPath}`;
+  console.log("[DB] Connecting to:", url);
+  const libsql = createClient({ url });
   const adapter = new PrismaLibSql(libsql);
   return new PrismaClient({ adapter });
 }
