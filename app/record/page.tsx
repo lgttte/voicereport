@@ -21,6 +21,11 @@ import {
   Bell,
   Wrench,
   TriangleAlert,
+  CheckSquare,
+  Send,
+  Calendar,
+  Camera,
+  Home,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -1395,229 +1400,282 @@ export default function RecordPage() {
 
   }
 
-  // Vue 2 : Validation — Mobile-first, single column
+  // ── Review screen (premium) ──
   const scoreValue = report?.score;
-  const circumference = 2 * Math.PI * 30; // ≈ 188.5
-  const scoreOffset = circumference * (1 - (scoreValue || 0) / 10);
-  const scoreGradient: [string, string] =
-    scoreValue && scoreValue >= 7 ? ["#86efac", "#22c55e"]
-    : scoreValue && scoreValue >= 5 ? ["#fde047", "#f59e0b"]
-    : ["#fda4af", "#e11d48"];
-  const scoreTextColor =
-    scoreValue && scoreValue >= 7 ? "#4ade80"
-    : scoreValue && scoreValue >= 5 ? "#fbbf24"
-    : "#f87171";
-  const scoreGlowColor =
-    scoreValue && scoreValue >= 7 ? "rgba(74,222,128,0.5)"
-    : scoreValue && scoreValue >= 5 ? "rgba(251,191,36,0.5)"
-    : "rgba(248,113,113,0.5)";
+  const circumference = 2 * Math.PI * 30;
+  const scoreOffset = circumference * (1 - (scoreValue ?? 0) / 10);
 
-  // Hero color scheme based on status
-  const heroColors =
-    statutLevel === "green"  ? { bg: "rgba(74,222,128,0.10)", bgEnd: "rgba(20,184,100,0.04)", border: "rgba(74,222,128,0.22)", glow: "rgba(74,222,128,0.15)", pillBg: "rgba(74,222,128,0.15)", pillBorder: "rgba(74,222,128,0.3)", pillText: "#86efac", dot: "#4ade80", quoteBorder: "rgba(74,222,128,0.4)", lineGrad: "rgba(74,222,128,0.5)", blobGrad: "rgba(74,222,128,0.18)" }
-    : statutLevel === "orange" ? { bg: "rgba(251,191,36,0.10)", bgEnd: "rgba(184,140,20,0.04)", border: "rgba(251,191,36,0.22)", glow: "rgba(251,191,36,0.15)", pillBg: "rgba(251,191,36,0.15)", pillBorder: "rgba(251,191,36,0.3)", pillText: "#fde68a", dot: "#fbbf24", quoteBorder: "rgba(251,191,36,0.4)", lineGrad: "rgba(251,191,36,0.5)", blobGrad: "rgba(251,191,36,0.18)" }
-    : statutLevel === "red"    ? { bg: "rgba(248,113,113,0.10)", bgEnd: "rgba(184,50,50,0.04)", border: "rgba(248,113,113,0.22)", glow: "rgba(248,113,113,0.15)", pillBg: "rgba(248,113,113,0.15)", pillBorder: "rgba(248,113,113,0.3)", pillText: "#fca5a5", dot: "#f87171", quoteBorder: "rgba(248,113,113,0.4)", lineGrad: "rgba(248,113,113,0.5)", blobGrad: "rgba(248,113,113,0.18)" }
-    : { bg: "rgba(74,222,128,0.10)", bgEnd: "rgba(20,184,100,0.04)", border: "rgba(74,222,128,0.22)", glow: "rgba(74,222,128,0.15)", pillBg: "rgba(74,222,128,0.15)", pillBorder: "rgba(74,222,128,0.3)", pillText: "#86efac", dot: "#4ade80", quoteBorder: "rgba(74,222,128,0.4)", lineGrad: "rgba(74,222,128,0.5)", blobGrad: "rgba(74,222,128,0.18)" };
+  const scoreColor =
+    scoreValue && scoreValue >= 7 ? { grad: ["#86efac","#22c55e"], text: "#4ade80", glow: "rgba(74,222,128,0.45)" }
+    : scoreValue && scoreValue >= 5 ? { grad: ["#fde047","#f59e0b"], text: "#fbbf24", glow: "rgba(251,191,36,0.45)" }
+    : { grad: ["#fda4af","#e11d48"], text: "#f87171", glow: "rgba(248,113,113,0.45)" };
 
-  // Format date: "10 avril 2026"
-  const reportDate = new Date();
-  const frenchMonths = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
-  const day = reportDate.getDate();
-  const dayStr = day === 1 ? "1er" : String(day);
-  const formattedDate = `${dayStr} ${frenchMonths[reportDate.getMonth()]} ${reportDate.getFullYear()}`;
-  const formattedTime = reportDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const badgeStyle = {
+    green:  { pill: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" },
+    orange: { pill: "bg-amber-500/15   border-amber-500/30   text-amber-300"   },
+    red:    { pill: "bg-red-500/15     border-red-500/30     text-red-300"     },
+    none:   { pill: "bg-slate-700/50   border-slate-600       text-slate-300"   },
+  };
+  const bs = badgeStyle[statutLevel];
 
-  // Rubrique data
-  const travauxItems = report?.travaux_realises || [];
-  const problemesItems = report?.problemes_rencontres || [];
-  const materielItems = report?.materiel_manquant || [];
-  const aPrevoirItems = report?.a_prevoir || [];
+  const reportCards = [
+    {
+      label: "Travaux réalisés",
+      items: report?.travaux_realises || [],
+      icon: CheckSquare,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-500/20",
+      border: "border-l-emerald-500",
+      dot: "bg-emerald-400",
+      empty: "Aucune tâche enregistrée",
+    },
+    {
+      label: "Problèmes rencontrés",
+      items: (report?.problemes_rencontres || []).map((i) => parseSeverity(i).text),
+      icon: ShieldAlert,
+      color: "text-red-400",
+      bg: "bg-red-500/10 border-red-500/20",
+      border: "border-l-red-500",
+      dot: "bg-red-400",
+      empty: "Aucun incident signalé",
+    },
+    {
+      label: "Matériel manquant",
+      items: report?.materiel_manquant || [],
+      icon: Package,
+      color: "text-amber-400",
+      bg: "bg-amber-500/10 border-amber-500/20",
+      border: "border-l-amber-500",
+      dot: "bg-amber-400",
+      empty: "Aucun manque déclaré",
+    },
+    {
+      label: "À prévoir",
+      items: report?.a_prevoir || [],
+      icon: Calendar,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10 border-blue-500/20",
+      border: "border-l-blue-500",
+      dot: "bg-blue-400",
+      empty: "Aucune action planifiée",
+    },
+  ] as const;
+
   const alertes = report?.alertes || [];
   const chantierName = report?.lieu_chantier || "";
 
+  const CARD_VARIANTS = {
+    hidden: { opacity: 0, y: 20 },
+    show: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.45, ease: EASE, delay: i * 0.09 },
+    }),
+  };
+
   return (
-    <main className="rv-body">
-      <div className="rv-orb rv-orb-1" />
-      <div className="rv-orb rv-orb-2" />
+    <main className="relative min-h-screen bg-slate-950 pb-32 overflow-hidden">
 
-      <div className="rv-wrap">
-
-        {/* BREADCRUMB */}
-        <div className="rv-crumb">
-          <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3"/></svg>
-          Rapports
-          <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-          <span className="rv-crumb-now">Récapitulatif</span>
-        </div>
-
-        {/* HERO STATUS */}
+      {/* Ambient orbs */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 w-[700px] h-[400px] rounded-full bg-violet-600/8 blur-[120px]" />
+        <div className="absolute bottom-0 right-[-60px] w-[400px] h-[400px] rounded-full bg-sky-600/6 blur-[100px]" />
         <div
-          className="rv-hero"
+          className="absolute inset-0 opacity-[0.018]"
           style={{
-            background: `linear-gradient(135deg, ${heroColors.bg} 0%, ${heroColors.bgEnd} 60%, rgba(20,24,42,0.4) 100%)`,
-            border: `1px solid ${heroColors.border}`,
-            boxShadow: `0 20px 50px -20px ${heroColors.glow}`,
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
           }}
+        />
+      </div>
+
+      <div className="relative z-10 w-full max-w-lg mx-auto px-4 pt-12 pb-6">
+
+        {/* Breadcrumb */}
+        <motion.div
+          className="flex items-center gap-1.5 text-xs text-slate-600 mb-8"
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0, transition: { duration: 0.4, ease: EASE } }}
         >
-          <div className="rv-hero-line" style={{ background: `linear-gradient(90deg, transparent, ${heroColors.lineGrad}, transparent)` }} />
-          <div className="rv-hero-blob" style={{ background: `radial-gradient(circle, ${heroColors.blobGrad}, transparent 70%)` }} />
+          <Home className="w-3.5 h-3.5" />
+          <span>Rapports</span>
+          <span className="text-slate-700">›</span>
+          <span className="text-slate-400 font-medium">Récapitulatif</span>
+          {chantierName && (
+            <>
+              <span className="text-slate-700">›</span>
+              <span className="text-slate-500 truncate max-w-[120px]">{chantierName}</span>
+            </>
+          )}
+        </motion.div>
 
-          <div className="rv-hero-top">
-            <div className="rv-hero-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div className="rv-hero-pill" style={{ background: heroColors.pillBg, borderColor: heroColors.pillBorder, color: heroColors.pillText, fontSize: 15, padding: '8px 18px', minWidth: 0 }}>
-                Quelques difficultés
+        {/* Score hero card */}
+        <motion.div
+          className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md overflow-hidden mb-5 p-6"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
+        >
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-3 min-w-0">
+              <span className={`inline-flex self-start items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest ${bs.pill}`}>
+                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+                {statutLabel[statutLevel]}
+              </span>
+              <div className="space-y-0.5">
+                <p className="text-lg font-black text-white leading-tight">
+                  {chantierName || "Rapport du jour"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+                  {" · "}
+                  {new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                </p>
               </div>
-              {scoreValue != null && (
-                <div className="rv-score-ring" style={{ marginLeft: 12 }}>
-                  <svg viewBox="0 0 70 70">
-                    <defs>
-                      <linearGradient id="rvScoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor={scoreGradient[0]} />
-                        <stop offset="100%" stopColor={scoreGradient[1]} />
-                      </linearGradient>
-                    </defs>
-                    <circle className="rv-score-track" cx="35" cy="35" r="30" />
-                    <circle
-                      className="rv-score-progress"
-                      cx="35" cy="35" r="30"
-                      style={{ strokeDashoffset: scoreOffset, filter: `drop-shadow(0 0 8px ${scoreGlowColor})` }}
-                    />
-                  </svg>
-                  <div className="rv-score-num" style={{ fontSize: 18 }}>
-                    <strong style={{ color: scoreTextColor }}>{scoreValue}</strong>
-                    <span style={{ color: `${scoreTextColor}99` }}>/ 10</span>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {scoreValue != null && (
+              <div className="relative shrink-0 w-[72px] h-[72px]">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 70 70">
+                  <defs>
+                    <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={scoreColor.grad[0]} />
+                      <stop offset="100%" stopColor={scoreColor.grad[1]} />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="35" cy="35" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+                  <circle
+                    cx="35" cy="35" r="30"
+                    fill="none"
+                    stroke="url(#scoreGrad)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={scoreOffset}
+                    style={{ filter: `drop-shadow(0 0 6px ${scoreColor.glow})` }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black leading-none" style={{ color: scoreColor.text }}>{scoreValue}</span>
+                  <span className="text-[9px] font-semibold" style={{ color: scoreColor.text + "99" }}>/10</span>
+                </div>
+              </div>
+            )}
           </div>
+        </motion.div>
 
-          {/* No synthese/quote */}
-        </div>
-
-        {/* Alerts banner */}
+        {/* Alertes critiques */}
         {alertes.length > 0 && (
-          <div className="rv-alerts">
-            <div className="rv-alerts-header">
-              <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-              Alertes
+          <motion.div
+            className="rounded-2xl border border-red-500/25 bg-red-500/8 backdrop-blur-sm mb-5 overflow-hidden"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.1 } }}
+          >
+            <div className="flex items-center gap-2.5 px-4 pt-4 pb-3 border-b border-red-500/15">
+              <div className="w-7 h-7 rounded-lg bg-red-500/15 border border-red-500/25 flex items-center justify-center">
+                <Bell className="w-3.5 h-3.5 text-red-400" />
+              </div>
+              <span className="text-xs font-black text-red-400 uppercase tracking-widest">Alertes critiques</span>
+              <span className="ml-auto rounded-full bg-red-500/20 border border-red-500/30 text-red-300 text-[10px] font-bold px-2 py-0.5">{alertes.length}</span>
             </div>
-            {alertes.map((a, i) => (
-              <p key={i} className="rv-alerts-text">{a}</p>
-            ))}
-          </div>
+            <ul className="px-4 py-3 space-y-2">
+              {alertes.map((a, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-red-200/80">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" />
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
         )}
 
-        {/* Message feedback */}
-        {message && (
-          <div className="rv-message">{message}</div>
-        )}
-
-        {/* RUBRIQUES */}
-        <div className="rv-section-label">
-          <span />
+        {/* Section header: Détail du rapport */}
+        <motion.p
+          className="flex items-center gap-2 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { delay: 0.18 } }}
+        >
+          <span className="h-px flex-1 bg-slate-800" />
           Détail du rapport
+          <span className="h-px flex-1 bg-slate-800" />
+        </motion.p>
+
+        {/* 4 report cards */}
+        <div className="space-y-3 mb-5">
+          {reportCards.map(({ label, items, icon: Icon, color, bg, border, dot, empty }, idx) => (
+            <motion.div
+              key={label}
+              custom={idx}
+              variants={CARD_VARIANTS}
+              initial="hidden"
+              animate="show"
+              className={`relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm border-l-4 ${border} overflow-hidden`}
+            >
+              <div className="flex items-start gap-4 p-4">
+                <div className={`w-9 h-9 rounded-xl border ${bg} flex items-center justify-center shrink-0 mt-0.5`}>
+                  <Icon className={`w-4 h-4 ${color}`} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white mb-2">{label}</p>
+                  {items.length > 0 ? (
+                    <ul className="space-y-1.5">
+                      {(items as readonly string[]).map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-xs text-slate-400 leading-snug">
+                          <span className={`mt-1.5 w-1 h-1 rounded-full ${dot} shrink-0`} />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-slate-600 italic">{empty}</p>
+                  )}
+                </div>
+
+                <div className={`shrink-0 w-6 h-6 rounded-full border ${bg} flex items-center justify-center`}>
+                  <span className={`text-[10px] font-black ${color}`}>{items.length}</span>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
 
-        {isEditing ? (
-          <div className="rv-edit-box">
-            <p className="rv-edit-label">Mode édition</p>
-            <textarea
-              value={reportText}
-              onChange={(event) => setReportText(event.target.value)}
-              className="rv-edit-textarea"
-              rows={12}
-              placeholder="Modifiez le contenu du rapport..."
-            />
-          </div>
-        ) : (
-          <div className="rv-rubriques">
-            {/* Travaux réalisés */}
-            <div className="rv-rubrique green">
-              <div className="rv-rub-icon">
-                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </div>
-              <div className="rv-rub-body">
-                <div className="rv-rub-title">Travaux réalisés</div>
-                <div className={`rv-rub-content${travauxItems.length === 0 ? " empty" : ""}`}>
-                  {travauxItems.length > 0
-                    ? <ul className="rv-rub-list">{travauxItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                    : "Aucune tâche enregistrée"}
-                </div>
-              </div>
-              <div className="rv-rub-badge">{travauxItems.length}</div>
-            </div>
-
-            {/* Problèmes rencontrés */}
-            <div className="rv-rubrique red">
-              <div className="rv-rub-icon">
-                <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              </div>
-              <div className="rv-rub-body">
-                <div className="rv-rub-title">Problèmes rencontrés</div>
-                <div className={`rv-rub-content${problemesItems.length === 0 ? " empty" : ""}`}>
-                  {problemesItems.length > 0
-                    ? <ul className="rv-rub-list">{problemesItems.map((item, i) => <li key={i}>{parseSeverity(item).text}</li>)}</ul>
-                    : "Aucun incident signalé"}
-                </div>
-              </div>
-              <div className="rv-rub-badge">{problemesItems.length}</div>
-            </div>
-
-            {/* Matériel manquant */}
-            <div className="rv-rubrique amber">
-              <div className="rv-rub-icon">
-                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              </div>
-              <div className="rv-rub-body">
-                <div className="rv-rub-title">Matériel manquant</div>
-                <div className={`rv-rub-content${materielItems.length === 0 ? " empty" : ""}`}>
-                  {materielItems.length > 0
-                    ? <ul className="rv-rub-list">{materielItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                    : "Aucun manque déclaré"}
-                </div>
-              </div>
-              <div className="rv-rub-badge">{materielItems.length}</div>
-            </div>
-
-            {/* À prévoir */}
-            <div className="rv-rubrique cyan">
-              <div className="rv-rub-icon">
-                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
-              </div>
-              <div className="rv-rub-body">
-                <div className="rv-rub-title">À prévoir</div>
-                <div className={`rv-rub-content${aPrevoirItems.length === 0 ? " empty" : ""}`}>
-                  {aPrevoirItems.length > 0
-                    ? <ul className="rv-rub-list">{aPrevoirItems.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                    : "Aucune action planifiée"}
-                </div>
-              </div>
-              <div className="rv-rub-badge">{aPrevoirItems.length}</div>
-            </div>
-          </div>
-        )}
-
-        {/* ANNEXES */}
-        <div className="rv-section-label">
-          <span />
+        {/* Section header: Annexes & envoi */}
+        <motion.p
+          className="flex items-center gap-2 text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, transition: { delay: 0.5 } }}
+        >
+          <span className="h-px flex-1 bg-slate-800" />
           Annexes &amp; envoi
-        </div>
+          <span className="h-px flex-1 bg-slate-800" />
+        </motion.p>
 
-        {/* Photos */}
-        <div className="rv-photo-card">
-          <div className="rv-photo-head">
-            <div className="rv-photo-head-left">
-              <div className="rv-photo-head-icon">
-                <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-              </div>
-              <div className="rv-photo-head-text">
-                <strong>Photos chantier</strong>
-                <span>{photoPreviews.length > 0 ? `${photoPreviews.length} photo${photoPreviews.length > 1 ? "s" : ""} ajoutée${photoPreviews.length > 1 ? "s" : ""}` : "Aucune photo ajoutée"}</span>
-              </div>
+        {/* Photos upload */}
+        <motion.div
+          className="rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-3 overflow-hidden"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.52 } }}
+        >
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/6">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
+              <Camera className="w-4 h-4 text-sky-400" />
             </div>
-            <button type="button" className="rv-add-btn" onClick={() => fileInputRef.current?.click()}>
-              <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white leading-tight">Photos chantier</p>
+              <p className="text-xs text-slate-500">
+                {photoPreviews.length > 0
+                  ? `${photoPreviews.length} photo${photoPreviews.length > 1 ? "s" : ""} ajoutée${photoPreviews.length > 1 ? "s" : ""}`
+                  : "Aucune photo ajoutée"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-300 hover:bg-sky-500/20 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
               Ajouter
             </button>
           </div>
@@ -1627,79 +1685,118 @@ export default function RecordPage() {
             multiple
             accept="image/*"
             className="hidden"
-            onChange={(event) => handlePhotoSelection(event.target.files)}
+            onChange={(e) => handlePhotoSelection(e.target.files)}
           />
           {photoPreviews.length > 0 ? (
-            <div className="rv-photo-grid">
+            <div className="p-3 grid grid-cols-4 gap-2">
               {photoPreviews.map((photo, index) => (
-                <div key={photo.previewUrl} className="rv-photo-thumb">
+                <div key={photo.previewUrl} className="relative aspect-square rounded-xl overflow-hidden border border-white/10">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.previewUrl} alt={`Photo ${index + 1}`} />
-                  <button type="button" className="rv-photo-remove" onClick={() => handleRemovePhoto(index)}>
-                    <X className="rv-photo-remove-x" />
+                  <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(index)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 border border-white/20 flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3 text-white" />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="rv-photo-empty">
-              <div className="rv-photo-empty-ico">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
-              </div>
-              <span>Appuyez sur Ajouter pour joindre des photos</span>
+            <div className="flex flex-col items-center gap-2 py-6 px-4 text-slate-700">
+              <Camera className="w-7 h-7 opacity-40" />
+              <p className="text-xs">Appuyez sur Ajouter pour joindre des photos</p>
             </div>
           )}
-        </div>
+        </motion.div>
 
-        {/* Email */}
-        <div className="rv-email-card">
-          <div className="rv-email-ico">
-            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
-          <div className="rv-email-input-wrap">
-            <input
-              type="email"
-              value={recipientEmail}
-              onChange={(e) => setRecipientEmail(e.target.value)}
-              className="rv-email-input"
-              placeholder="Entrez l'adresse email du destinataire..."
-            />
-          </div>
-        </div>
+        {/* Email input */}
+        <motion.div
+          className="rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-4 flex items-center gap-3 px-4 py-3.5"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.58 } }}
+        >
+          <Send className="w-4 h-4 text-slate-500 shrink-0" />
+          <input
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="Email du destinataire…"
+            className="flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
+          />
+        </motion.div>
 
-        {/* Secondary buttons */}
-        <div className="rv-secondary">
-          <button type="button" onClick={() => setIsEditing((current) => !current)} className="rv-secondary-btn">
-            <svg viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-            {isEditing ? "Aperçu" : "Modifier"}
+        {/* Secondary actions */}
+        <div className="flex items-center justify-center gap-5 mb-2">
+          <button
+            type="button"
+            onClick={() => setIsEditing((v) => !v)}
+            className="text-xs text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            {isEditing ? "Aperçu" : "Modifier le texte"}
           </button>
-          <span className="rv-secondary-sep" />
-          <button type="button" onClick={resetFlow} className="rv-secondary-btn">
-            <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zm5 9a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
+          <span className="w-px h-3 bg-slate-800" />
+          <button
+            type="button"
+            onClick={resetFlow}
+            className="text-xs text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1.5"
+          >
+            <Mic className="w-3.5 h-3.5" />
             Recommencer
           </button>
         </div>
 
+        {isEditing && (
+          <div className="mt-3 rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm overflow-hidden">
+            <textarea
+              value={reportText}
+              onChange={(e) => setReportText(e.target.value)}
+              className="w-full bg-transparent text-sm text-slate-300 placeholder-slate-600 outline-none p-4 resize-none"
+              rows={10}
+              placeholder="Modifiez le contenu du rapport…"
+            />
+          </div>
+        )}
+
+        {message && (
+          <div className="mt-3 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {message}
+          </div>
+        )}
+
       </div>
 
-      {/* CTA STICKY */}
-      <div className="rv-cta-bar">
-        <div className="rv-cta-inner">
-          <button
+      {/* Sticky send CTA */}
+      <div className="fixed bottom-0 inset-x-0 z-30">
+        <div className="mx-auto max-w-lg px-4 pb-5 pt-3" style={{ background: "linear-gradient(to top, rgba(2,6,23,0.95) 70%, transparent)" }}>
+          <motion.button
             type="button"
-            className={`rv-cta${isSending ? " rv-cta-disabled" : ""}`}
             onClick={handleSendReport}
             disabled={isSending}
+            whileHover={isSending ? {} : { scale: 1.02 }}
+            whileTap={isSending ? {} : { scale: 0.97 }}
+            className="w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-base font-black text-white disabled:opacity-60 transition-opacity"
+            style={{
+              background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%)",
+              boxShadow: isSending ? "none" : "0 0 40px rgba(59,130,246,0.45), 0 8px 32px rgba(29,78,216,0.5), 0 20px 40px rgba(0,0,0,0.4)",
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.65 } }}
           >
             {isSending ? (
-              <span className="rv-cta-spinner" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Envoi en cours…
+              </>
             ) : (
-              <span className="rv-cta-ico">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              </span>
+              <>
+                <Send className="w-5 h-5" />
+                Envoyer le rapport
+              </>
             )}
-            {isSending ? "Envoi en cours…" : "Envoyer le rapport"}
-          </button>
+          </motion.button>
         </div>
       </div>
 
