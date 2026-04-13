@@ -1,15 +1,15 @@
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { createClient } from "@libsql/client";
-import path from "path";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 function createPrismaClient() {
-  // On Windows, path.join returns backslashes — libsql requires forward slashes
-  const dbPath = path.join(process.cwd(), "prisma", "dev.db").replace(/\\/g, "/");
-  const url = `file:${dbPath}`;
-  console.log("[DB] Connecting to:", url);
-  const libsql = createClient({ url });
-  const adapter = new PrismaLibSql(libsql);
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error(
+      "[DB] DATABASE_URL est manquante. Ajoutez-la dans .env.local (local) ou dans les variables d'environnement Vercel (production)."
+    );
+  }
+  console.log("[DB] Connexion PostgreSQL initialisée");
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 
