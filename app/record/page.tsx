@@ -14,12 +14,22 @@ import {
   CheckCircle,
   BarChart3,
   WifiOff,
+  LayoutDashboard,
+  Lock,
+  Settings,
+  User,
+  Bell,
+  Wrench,
+  TriangleAlert,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Chat from "../components/Chat";
 import EliteDashboard from "../components/EliteDashboard";
 import type { GeoLocation } from "../lib/types";
 import { clearHistory } from "../lib/storage";
+
+const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 type Stage = "idle" | "recording" | "preview" | "enrich" | "processing" | "review" | "success" | "dashboard";
 
@@ -771,36 +781,66 @@ export default function RecordPage() {
     // ── Success screen ──
     if (stage === "success") {
       return (
-        <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-6 py-10">
-          {/* Subtle radial glow behind icon */}
-          <div aria-hidden="true" className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-72 w-72 rounded-full bg-emerald-500/10 blur-[80px]" />
+        <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-6 py-10 overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-[120px]" />
+          </div>
+          <motion.div
+            className="relative z-10 flex flex-col items-center w-full max-w-sm text-center"
+            initial="hidden"
+            animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.12 } } }}
+          >
+            <motion.div
+              variants={{ hidden: { scale: 0.5, opacity: 0 }, show: { scale: 1, opacity: 1, transition: { type: "spring", stiffness: 260, damping: 20 } } }}
+              className="mb-8"
+            >
+              <div className="relative w-28 h-28 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center"
+                style={{ boxShadow: "0 0 60px rgba(52,211,153,0.25)" }}>
+                <CheckCircle className="w-14 h-14 text-emerald-400" />
+              </div>
+            </motion.div>
 
-          <div className="relative z-10 flex flex-col items-center w-full max-w-sm text-center">
-            <CheckCircle className="h-24 w-24 text-emerald-400 animate-scaleIn mb-8" />
-            <h1 className="text-3xl font-bold text-white mb-3 animate-fadeInUp stagger-2">
-              {offlineBanner ? "Rapport sauvegardé !" : "Rapport envoyé\u00a0!"}
-            </h1>
-            <p className="text-base text-slate-400 mb-6 leading-relaxed animate-fadeInUp stagger-3">
+            <motion.h1
+              variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
+              className="text-3xl font-black text-white mb-3"
+            >
+              {offlineBanner ? "Rapport sauvegardé !" : "Rapport envoyé !"}
+            </motion.h1>
+
+            <motion.p
+              variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
+              className="text-base text-slate-400 mb-6 leading-relaxed"
+            >
               {offlineBanner
                 ? "Il sera envoyé automatiquement au retour du réseau."
-                : <>Transmis par email à <span className="font-medium text-slate-200">{recipientEmail}</span></>
+                : <>Transmis par email à <span className="font-semibold text-slate-200">{recipientEmail}</span></>
               }
-            </p>
+            </motion.p>
+
             {offlineBanner && (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 mb-6 animate-fadeInUp stagger-3">
+              <motion.div
+                variants={{ hidden: { opacity: 0 }, show: { opacity: 1 } }}
+                className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 mb-6"
+              >
                 <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
                 <p className="text-xs text-amber-300">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
-              </div>
+              </motion.div>
             )}
-            <button
+
+            <motion.button
+              variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
               type="button"
               onClick={() => { setOfflineBanner(false); resetFlow(); }}
-              className="flex items-center gap-2.5 rounded-xl bg-sky-500 px-8 py-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all duration-200 hover:bg-sky-400 hover:scale-[1.02] active:scale-[0.98] animate-fadeInUp stagger-4"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-2.5 rounded-2xl px-8 py-4 text-sm font-bold text-white shadow-xl transition-colors"
+              style={{ background: "linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)", boxShadow: "0 8px 30px rgba(14,165,233,0.3)" }}
             >
               <Mic className="h-4 w-4" />
               Nouveau rapport
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </main>
       );
     }
@@ -1135,131 +1175,224 @@ export default function RecordPage() {
     // ── Recording screen ──
     if (isRecording) {
       return (
-        <div className="rc-body">
-          <div className="rc-orb rc-orb-1" />
-          <div className="rc-orb rc-orb-2" />
-          <div className="rc-orb rc-orb-3" />
-          <div className="rc-wrap">
-            {/* Recording badge */}
-            <div className="rc-badge">
-              <span className="rc-badge-dot rc-badge-dot-rec" />
-              En écoute...
+        <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-6 overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-red-600/12 blur-[130px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] rounded-full bg-red-500/8 blur-[60px]" />
+          </div>
+
+          <motion.div
+            className="relative z-10 flex flex-col items-center text-center gap-8"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1, transition: { duration: 0.4, ease: EASE } }}
+          >
+            {/* Live badge */}
+            <div className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2">
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+              <span className="text-xs font-bold text-red-300 uppercase tracking-widest">En écoute…</span>
             </div>
 
             {/* Timer */}
-            <p className="rc-timer">{formatTime(elapsed)}</p>
+            <p className="text-6xl font-black text-white tabular-nums tracking-tight">{formatTime(elapsed)}</p>
 
-            {/* Sound wave */}
-            <div className="rc-wave">
-              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rc-wave-bar" style={{ animationDelay: `${i * 0.12}s` }} />
+            {/* Sound bars */}
+            <div className="flex items-end gap-1.5 h-10">
+              {[0,1,2,3,4,5,6].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-1.5 rounded-full bg-red-400"
+                  animate={{ height: ["30%", "100%", "50%", "80%", "30%"] }}
+                  transition={{ duration: 0.8, repeat: Infinity, repeatType: "mirror", delay: i * 0.1, ease: "easeInOut" }}
+                  style={{ minHeight: 6 }}
+                />
               ))}
             </div>
 
-            {/* Stop mic button */}
-            <div className="rc-mic-area rc-mic-area-rec">
-              <div className="rc-mic-glow rc-mic-glow-rec" />
-              <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Arrêter l'enregistrement">
-                <svg viewBox="0 0 24 24" fill="#fff" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
-              </button>
+            {/* Pulsing stop button */}
+            <div className="relative flex items-center justify-center">
+              {/* Pulse rings */}
+              <motion.div
+                className="absolute w-40 h-40 rounded-full border border-red-500/20"
+                animate={{ scale: [1, 1.4], opacity: [0.5, 0] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut" }}
+              />
+              <motion.div
+                className="absolute w-40 h-40 rounded-full border border-red-500/15"
+                animate={{ scale: [1, 1.7], opacity: [0.4, 0] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: "easeOut", delay: 0.4 }}
+              />
+              <motion.button
+                type="button"
+                onClick={handleButtonClick}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                aria-label="Arrêter l'enregistrement"
+                className="relative w-28 h-28 rounded-full flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)", boxShadow: "0 0 40px rgba(239,68,68,0.5), 0 20px 40px rgba(0,0,0,0.4)" }}
+              >
+                {/* Stop icon */}
+                <div className="w-10 h-10 rounded-lg bg-white/90" />
+              </motion.button>
             </div>
 
-            <p className="rc-instruction">Appuyez pour terminer</p>
-          </div>
-        </div>
+            <p className="text-sm text-slate-500 font-medium">Appuyez pour terminer</p>
+          </motion.div>
+        </main>
       );
     }
 
     // ── Idle screen (default) ──
-    return (
-      <div className="rc-body">
-        <div className="rc-orb rc-orb-1" />
-        <div className="rc-orb rc-orb-2" />
-        <div className="rc-orb rc-orb-3" />
-        <div className="rc-wrap">
+    const GUIDE_ITEMS = [
+      { icon: MapPin,        color: "text-sky-400",     bg: "bg-sky-500/10 border-sky-500/20",       glow: "group-hover:border-sky-500/45",     label: "Lieu du chantier",     hint: "Nommez le chantier ou la ville" },
+      { icon: Wrench,        color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20", glow: "group-hover:border-violet-500/45",   label: "Travaux réalisés",      hint: "Décrivez les tâches effectuées" },
+      { icon: TriangleAlert, color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",   glow: "group-hover:border-amber-500/45",    label: "Problèmes rencontrés", hint: "Retards, pannes, incidents" },
+      { icon: Package,       color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20",glow: "group-hover:border-emerald-500/45", label: "Matériel manquant",     hint: "Ce qui manque pour avancer" },
+    ] as const;
 
-          {/* Title */}
-          <h1 className="rc-title">Nouveau rapport</h1>
-          <p className="rc-subtitle">Appuyez et décrivez votre journée</p>
+    return (
+      <main className="relative min-h-screen bg-slate-950 flex flex-col pb-24 overflow-hidden">
+        {/* Ambient */}
+        <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-sky-600/10 blur-[140px]" />
+          <div className="absolute top-[20%] right-[-80px] w-[350px] h-[350px] rounded-full bg-violet-600/8 blur-[100px]" />
+          <div className="absolute bottom-0 left-[20%] w-[400px] h-[300px] rounded-full bg-indigo-600/6 blur-[100px]" />
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center px-5 pt-14 pb-6 w-full max-w-lg mx-auto">
+          {/* Header */}
+          <motion.div
+            className="text-center mb-10 w-full"
+            initial={{ opacity: 0, y: -14 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
+          >
+            {workerName && (
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                Bonjour, <span className="text-slate-400">{workerName}</span>
+              </p>
+            )}
+            <h1 className="text-4xl font-black text-white tracking-tight mb-2">Nouveau rapport</h1>
+            <p className="text-base text-slate-400">Appuyez et décrivez votre journée</p>
+          </motion.div>
 
           {/* Mic button */}
-          <div className="rc-mic-area">
-            <div className="rc-mic-glow" />
-            <button type="button" className="rc-mic" onClick={handleButtonClick} aria-label="Démarrer l'enregistrement">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="2" width="6" height="12" rx="3" />
-                <path d="M5 10a7 7 0 0 0 14 0" />
-                <line x1="12" y1="17" x2="12" y2="22" />
-                <line x1="8" y1="22" x2="16" y2="22" />
-              </svg>
-            </button>
-          </div>
+          <motion.div
+            className="flex flex-col items-center mb-10"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
+          >
+            <div className="relative flex items-center justify-center mb-5">
+              <div className="absolute w-48 h-48 rounded-full border border-white/5" />
+              <div className="absolute w-36 h-36 rounded-full border border-white/8" />
+              <motion.button
+                type="button"
+                onClick={handleButtonClick}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                aria-label="Démarrer l'enregistrement"
+                className="relative w-28 h-28 rounded-full flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                  boxShadow: "0 0 50px rgba(99,102,241,0.4), 0 0 100px rgba(37,99,235,0.15), 0 20px 40px rgba(0,0,0,0.5)",
+                }}
+              >
+                <Mic className="w-11 h-11 text-white" />
+              </motion.button>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-5 py-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={encourageIdx}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-sm text-slate-300 font-medium"
+                >
+                  {ENCOURAGEMENT_PHRASES[encourageIdx]}
+                </motion.span>
+              </AnimatePresence>
+            </div>
+          </motion.div>
 
-          {/* Stat — rotating encouragement */}
-          <div className="rc-stat">
-            <span className="rc-live">Live</span>
-            <span key={encourageIdx} className="rc-stat-text">{ENCOURAGEMENT_PHRASES[encourageIdx]}</span>
-          </div>
+          {/* Guide cards */}
+          <motion.div
+            className="w-full"
+            initial="hidden"
+            animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.25 } } }}
+          >
+            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3 text-center">Vous pouvez mentionner</p>
+            <div className="grid grid-cols-2 gap-3">
+              {GUIDE_ITEMS.map(({ icon: Icon, color, bg, glow, label, hint }) => (
+                <motion.div
+                  key={label}
+                  variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
+                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                  className={`group flex flex-col gap-3 p-4 rounded-2xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-300`}
+                >
+                  <div className={`w-9 h-9 rounded-xl border ${bg} flex items-center justify-center`}>
+                    <Icon className={`w-4 h-4 ${color}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white leading-tight">{label}</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-snug">{hint}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
 
-          {/* Category hint label */}
-          <p className="rc-cat-hint">Voici ce que vous pouvez mentionner :</p>
-
-          {/* Category hint cards */}
-          <div className="rc-categories">
-            {([
-              { label: "Lieu",       hint: "Chantier, ville",
-                icon: <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> },
-              { label: "Travaux",    hint: "Ce qui a été fait",
-                icon: <svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg> },
-              { label: "Problèmes", hint: "Retards, pannes",
-                icon: <svg viewBox="0 0 24 24"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> },
-              { label: "Matériel",  hint: "Ce qui manque",
-                icon: <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> },
-            ] as { icon: React.ReactNode; label: string; hint: string }[]).map(
-              ({ icon, label, hint }) => (
-                <div key={label} className="rc-cat">
-                  <span className="rc-cat-icon">{icon}</span>
-                  <span className="rc-cat-text">
-                    <strong>{label}</strong>
-                    <span>{hint}</span>
-                  </span>
-                </div>
-              )
-            )}
-          </div>
-
-          {/* Offline queue banner */}
+          {/* Offline banner */}
           {offlineQueue.length > 0 && (
-            <div className="mt-6 flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 w-full animate-fadeIn">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 w-full flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
               <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
               <p className="text-xs text-amber-300 flex-1">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
-              {navigator.onLine && (
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new Event("online"))}
-                  className="text-[10px] text-amber-400 font-semibold hover:text-amber-300"
-                >
-                  Réessayer
-                </button>
+              {typeof navigator !== "undefined" && navigator.onLine && (
+                <button type="button" onClick={() => window.dispatchEvent(new Event("online"))} className="text-[10px] text-amber-400 font-semibold hover:text-amber-300">Réessayer</button>
               )}
-            </div>
-          )}
-
-          {/* Dashboard button */}
-          {savedReports.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setStage("dashboard")}
-              className="mt-6 flex items-center justify-center gap-2 w-full rounded-xl bg-slate-800/40 border border-slate-700/50 px-4 py-3 text-sm text-slate-400 hover:text-white hover:border-slate-600 transition-all animate-fadeIn stagger-8"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Dashboard
-              <span className="ml-auto rounded-full bg-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-300">{savedReports.length}</span>
-            </button>
+            </motion.div>
           )}
         </div>
-      </div>
+
+        {/* Bottom nav */}
+        <div className="fixed bottom-0 inset-x-0 z-20">
+          <div className="mx-auto max-w-lg px-4">
+            <div className="rounded-t-2xl border border-white/8 bg-slate-950/90 backdrop-blur-xl px-2 py-3">
+              <div className="flex items-center justify-around">
+                <button type="button" onClick={() => setStage("dashboard")} className="relative flex flex-col items-center gap-1 px-4 py-1 group">
+                  <div className="relative">
+                    <LayoutDashboard className="w-5 h-5 text-slate-400 group-hover:text-sky-400 transition-colors" />
+                    {savedReports.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-black text-slate-950 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #fbbf24, #f59e0b)", boxShadow: "0 0 8px rgba(251,191,36,0.6)" }}>
+                        {savedReports.length > 9 ? "9+" : savedReports.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors">Rapports</span>
+                </button>
+                <div className="flex flex-col items-center gap-1 px-4 py-1">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center">
+                    <Mic className="w-4 h-4 text-sky-400" />
+                  </div>
+                  <span className="text-[10px] font-bold text-sky-400">Enregistrer</span>
+                </div>
+                <button type="button" onClick={() => router.push("/")} className="flex flex-col items-center gap-1 px-4 py-1 group">
+                  <Settings className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+                  <span className="text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors">Accueil</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-center gap-1.5 py-3 mt-2">
+          <Lock className="w-3 h-3 text-slate-700" />
+          <p className="text-xs text-slate-700">Vos données sont sécurisées et cryptées</p>
+        </div>
+      </main>
     );
+
   }
 
   // Vue 2 : Validation — Mobile-first, single column
