@@ -36,7 +36,7 @@ import { clearHistory } from "../lib/storage";
 
 const EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-type Stage = "idle" | "recording" | "preview" | "enrich" | "processing" | "review" | "success" | "dashboard";
+type Stage = "idle" | "recording" | "enrich" | "processing" | "review" | "success" | "dashboard";
 
 // ── Chantier registry (persisted in localStorage) ──
 type ChantierEntry = {
@@ -524,7 +524,7 @@ export default function RecordPage() {
           audioBlobRef.current = blob;
           const url = URL.createObjectURL(blob);
           setAudioUrl(url);
-          setStage("preview");
+          setStage("enrich");
         };
 
         mediaRecorderRef.current.onerror = (event) => {
@@ -863,143 +863,6 @@ export default function RecordPage() {
       );
     }
 
-    // ── Audio preview screen ──
-    if (stage === "preview" && audioUrl) {
-      const progress = audioDuration > 0 ? (playbackTime / audioDuration) * 100 : 0;
-      const totalDur = audioDuration > 0 ? audioDuration : elapsed;
-      const totalDurSec = Math.round(totalDur);
-      const BARS = 60;
-
-      const handleWaveSeek = (barIndex: number) => {
-        if (!audioRef.current || totalDur <= 0) return;
-        const seekTime = (barIndex / BARS) * totalDur;
-        audioRef.current.currentTime = seekTime;
-        setPlaybackTime(seekTime);
-      };
-
-      return (
-        <main className="vf-body">
-          <div className="vf-orb vf-orb-1" />
-          <div className="vf-orb vf-orb-2" />
-          <div className="vf-orb vf-orb-3" />
-
-          {/* Hidden audio element */}
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            className="hidden"
-            onLoadedMetadata={() => {
-              if (audioRef.current) {
-                const d = audioRef.current.duration;
-                setAudioDuration(Number.isFinite(d) ? d : elapsed);
-              }
-            }}
-            onTimeUpdate={() => {
-              if (audioRef.current) setPlaybackTime(audioRef.current.currentTime);
-            }}
-            onEnded={() => {
-              setIsPlaying(false);
-              setPlaybackTime(0);
-            }}
-          />
-
-          <div className="vf-wrap">
-
-            {/* Badge */}
-            <div className="vf-badge">
-              <span className="vf-badge-check">✓</span>
-              Enregistrement réussi
-            </div>
-
-            {/* Title */}
-            <h1 className="vf-title">Vérifiez votre enregistrement</h1>
-            <p className="vf-subtitle">Réécoutez avant de générer le rapport</p>
-
-            {/* Player */}
-            <div className="vf-player">
-              <button
-                type="button"
-                className="vf-play-btn"
-                aria-label={isPlaying ? "Pause" : "Lecture"}
-                onClick={togglePlayback}
-              >
-                {isPlaying ? (
-                  <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
-                ) : (
-                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                )}
-              </button>
-
-              {/* Waveform */}
-              <div className="vf-waveform">
-                {Array.from({ length: BARS }).map((_, i) => {
-                  const t = i / BARS;
-                  const h = 25 + Math.sin(t * 12) * 30 + Math.sin(t * 27) * 20 + ((Math.sin(i * 137.5) + 1) * 15);
-                  const height = Math.max(15, Math.min(100, h));
-                  const played = totalDur > 0 && (i / BARS) < (playbackTime / totalDur);
-                  return (
-                    <div
-                      key={i}
-                      className={`vf-bar${played ? " played" : ""}`}
-                      style={{ height: `${height}%` }}
-                      onClick={() => handleWaveSeek(i)}
-                    />
-                  );
-                })}
-              </div>
-
-              {/* Timer */}
-              <div className="vf-timer">
-                <span className="vf-timer-current">{formatTime(Math.floor(playbackTime))}</span>
-                <span className="vf-timer-sep">/</span>
-                <span>{formatTime(Math.floor(totalDur))}</span>
-              </div>
-            </div>
-
-            {/* Info row */}
-            <div className="vf-info-row">
-              <div className="vf-info-left">
-                <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /></svg>
-                Audio capturé · {totalDurSec} seconde{totalDurSec !== 1 ? "s" : ""}
-              </div>
-            </div>
-
-            {/* CTA */}
-            <button
-              type="button"
-              className="vf-cta"
-              onClick={() => {
-                setIsPlaying(false);
-                if (audioRef.current) audioRef.current.pause();
-                setStage("enrich");
-              }}
-            >
-              <span className="vf-cta-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#050811" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                  <line x1="9" y1="13" x2="15" y2="13" />
-                  <line x1="9" y1="17" x2="15" y2="17" />
-                </svg>
-              </span>
-              Générer mon rapport
-              <span className="vf-cta-arrow">→</span>
-            </button>
-
-            {/* Restart */}
-            <button
-              type="button"
-              className="vf-restart"
-              onClick={resetFlow}
-            >
-              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
-              Recommencer l&apos;enregistrement
-            </button>
-          </div>
-        </main>
-      );
-    }
-
     // ── Enrichment screen — chantier selection + quick options ──
     if (stage === "enrich") {
       const searchLower = enrichChantierSearch.toLowerCase();
@@ -1133,11 +996,11 @@ export default function RecordPage() {
             {/* Back */}
             <button
               type="button"
-              onClick={() => setStage("preview")}
+              onClick={resetFlow}
               className="en-back"
             >
               <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /></svg>
-              Retour
+              Recommencer
             </button>
 
           </div>
@@ -1191,12 +1054,6 @@ export default function RecordPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.4, ease: EASE } }}
           >
-            {/* Live badge */}
-            <div className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2">
-              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-              <span className="text-xs font-bold text-red-300 uppercase tracking-widest">En écoute…</span>
-            </div>
-
             {/* Timer */}
             <p className="text-6xl font-black text-white tabular-nums tracking-tight">{formatTime(elapsed)}</p>
 
@@ -1281,9 +1138,9 @@ export default function RecordPage() {
             <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
           </motion.div>
 
-          {/* Mic button — takes remaining vertical space, centers the button */}
+          {/* Mic button — takes remaining vertical space, centers slightly above mid */}
           <motion.div
-            className="flex-1 flex flex-col items-center justify-center"
+            className="flex-1 flex flex-col items-center justify-center pb-4"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
@@ -1383,10 +1240,6 @@ export default function RecordPage() {
                   </div>
                   <span className="text-[10px] font-bold text-sky-400">Enregistrer</span>
                 </div>
-                <button type="button" onClick={() => router.push("/")} className="flex flex-col items-center gap-1 px-4 py-1 group">
-                  <Settings className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
-                  <span className="text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors">Accueil</span>
-                </button>
               </div>
             </div>
           </div>

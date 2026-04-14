@@ -35,13 +35,11 @@ type RoleCardProps = {
   glowColor: string;
   label: string;
   description: string;
-  badge: string;
-  badgeColor: string;
 };
 
 function RoleCard({
   onClick, icon, iconBg, iconGlow, borderHover, glowColor,
-  label, description, badge, badgeColor,
+  label, description,
 }: RoleCardProps) {
   return (
     <motion.button
@@ -73,11 +71,7 @@ function RoleCard({
         <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">{description}</p>
       </div>
 
-      {/* CTA badge */}
-      <div className={`flex items-center gap-2 rounded-full px-5 py-2 text-xs font-bold ${badgeColor} transition-all duration-300`}>
-        {badge}
-        <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-1" />
-      </div>
+      <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors duration-300 group-hover:translate-x-1" />
     </motion.button>
   );
 }
@@ -173,13 +167,6 @@ export default function SplitScreen() {
             Comment utilisez-vous VoiceReport&nbsp;?
           </motion.p>
 
-          {/* Version badge */}
-          <motion.div variants={fadeDown} className="mt-4">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1 text-xs font-semibold text-emerald-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Plateforme opérationnelle
-            </span>
-          </motion.div>
         </motion.div>
 
         {/* ── Role cards ── */}
@@ -198,8 +185,6 @@ export default function SplitScreen() {
             glowColor="bg-gradient-to-b from-sky-500/5 to-transparent"
             label="Je suis sur le terrain"
             description="Dictez votre rapport de chantier en quelques secondes"
-            badge="Accès rapide"
-            badgeColor="bg-sky-500/15 border border-sky-500/25 text-sky-300 group-hover:bg-sky-500/25"
           />
 
           <RoleCard
@@ -211,8 +196,6 @@ export default function SplitScreen() {
             glowColor="bg-gradient-to-b from-violet-500/5 to-transparent"
             label="Je suis au bureau"
             description="Consultez et analysez les rapports de votre équipe"
-            badge="Dashboard Admin"
-            badgeColor="bg-violet-500/15 border border-violet-500/25 text-violet-300 group-hover:bg-violet-500/25"
           />
         </motion.div>
 
