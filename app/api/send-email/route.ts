@@ -309,6 +309,9 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.setLineWidth(0.5);
   doc.line(0, 33.5, PW, 33.5);
 
+  // Draw page-1 footer once here (newPage() handles footer for p2+)
+  drawFooter();
+
   y = 37;
 
   // ── INFORMATIONS GÉNÉRALES GRID ──────────────────────────────────────────────
@@ -429,7 +432,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     y += 8;
   }
 
-  drawSectionLabel("\u2014 D\u00c9TAIL DU RAPPORT");
+  drawSectionLabel("D\u00c9TAIL DU RAPPORT");
 
   // ── SECTION DRAWER ─────────────────────────────────────────────────────────
   function drawSection(
@@ -458,15 +461,19 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...BLACK);
     doc.text(title, ML + 7, y + 6.8);
-    // count badge
+    // count badge — font must be set before getTextWidth to avoid wrong measure
     const countStr = String(items.length);
     doc.setFontSize(7);
     doc.setFont("helvetica", "bold");
-    const bw = doc.getTextWidth(countStr) + 7;
+    const bw = doc.getTextWidth(countStr) + 8;
+    const badgeX = PW - MR - bw;
+    const badgeY = y + 2;
+    const badgeH = 6;
     doc.setFillColor(...color);
-    doc.roundedRect(PW - MR - bw, y + 2, bw, 6, 3, 3, "F");
+    doc.roundedRect(badgeX, badgeY, bw, badgeH, 3, 3, "F");
     doc.setTextColor(...WHITE);
-    doc.text(countStr, PW - MR - bw / 2, y + 6, { align: "center" });
+    // Center text inside badge using explicit coordinates, not align:"center" with page-width semantics
+    doc.text(countStr, badgeX + bw / 2, badgeY + 4.2, { align: "center" });
 
     y += TITLE_H;
 
@@ -551,7 +558,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   // ── IMPACTS / RISQUES ───────────────────────────────────────────────────────
   if (impacts.length > 0) {
     if (y + 20 > PAGE_BOTTOM) newPage();
-    drawSectionLabel("\u2014 ANALYSE DES RISQUES");
+    drawSectionLabel("ANALYSE DES RISQUES");
 
     for (const imp of impacts) {
       const cleanImp = imp.replace(/^[\u26A0\uFE0F\u{1F4C5}\u{1F534}\u{1F7E0}\u{1F7E2}\u{1F327}\uFE0F\u{1F477}]+\s*/u, "").trim();
@@ -590,14 +597,20 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   // ── PHOTOS DU CHANTIER ──────────────────────────────────────────────────────
   if (compressedPhotos.length > 0) {
     if (y + 20 > PAGE_BOTTOM) newPage();
-    drawSectionLabel("\u2014 PHOTOS DU CHANTIER");
+    drawSectionLabel("PHOTOS DU CHANTIER");
 
     const GRID_GAP = 4;
     const COL_W = (CW - GRID_GAP) / 2;
 
+    // MAX_PHOTO_H: hard cap so photos never overflow a page
+    const MAX_PHOTO_H = 70; // mm
+    const PHOTO_ROW_RESERVE = MAX_PHOTO_H + 16; // image + legend + padding
+
     for (let i = 0; i < compressedPhotos.length; i += 2) {
-      let rowH = 65;
-      if (y + rowH + 10 > PAGE_BOTTOM) newPage();
+      // Conservative page-break: reserve full possible row height before drawing
+      if (y + PHOTO_ROW_RESERVE > PAGE_BOTTOM) newPage("PHOTOS DU CHANTIER");
+
+      let rowH = 0; // computed after rendering both columns
 
       for (let j = 0; j < 2 && (i + j) < compressedPhotos.length; j++) {
         const px = ML + j * (COL_W + GRID_GAP);
@@ -605,37 +618,41 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
           const b64  = compressedPhotos[i + j].toString("base64");
           const durl = "data:image/jpeg;base64," + b64;
           const props = doc.getImageProperties(durl);
+          // Compute dimensions with contain logic: fit within COL_W × MAX_PHOTO_H
           let iw = COL_W - 4;
           let ih = iw * (props.height / props.width);
-          if (ih > 72) { ih = 72; iw = ih * (props.width / props.height); }
-          if (ih + 8 > rowH) rowH = ih + 8;
+          if (ih > MAX_PHOTO_H) { ih = MAX_PHOTO_H; iw = ih * (props.width / props.height); }
+          const cardH = ih + 6;
+          if (cardH > rowH) rowH = cardH;
           // Photo card bg
           doc.setFillColor(...XXXGRAY);
-          doc.roundedRect(px, y, COL_W, ih + 4, 1.5, 1.5, "F");
+          doc.roundedRect(px, y, COL_W, cardH, 1.5, 1.5, "F");
           doc.setDrawColor(...XLGRAY);
           doc.setLineWidth(0.3);
-          doc.roundedRect(px, y, COL_W, ih + 4, 1.5, 1.5, "S");
-          doc.addImage(durl, "JPEG", px + (COL_W - iw) / 2, y + 2, iw, ih);
+          doc.roundedRect(px, y, COL_W, cardH, 1.5, 1.5, "S");
+          // Center image horizontally inside card
+          doc.addImage(durl, "JPEG", px + (COL_W - iw) / 2, y + 3, iw, ih);
           const legend = photoLegends[i + j] || "";
           if (legend) {
             doc.setFontSize(7);
             doc.setFont("helvetica", "italic");
             doc.setTextColor(...MGRAY);
             const ll = doc.splitTextToSize(legend, COL_W - 4) as string[];
-            doc.text(ll[0] || "", px + 2, y + ih + 10);
-            if (ih + 13 > rowH) rowH = ih + 13;
+            doc.text(ll[0] || "", px + 2, y + cardH + 5);
+            if (cardH + 8 > rowH) rowH = cardH + 8;
           }
         } catch {
+          const fallbackH = 55;
           doc.setFillColor(...XXXGRAY);
-          doc.roundedRect(px, y, COL_W, 55, 1.5, 1.5, "F");
+          doc.roundedRect(px, y, COL_W, fallbackH, 1.5, 1.5, "F");
           doc.setFontSize(8);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(...LGRAY);
-          doc.text("Photo indisponible", px + COL_W / 2, y + 28, { align: "center" });
-          if (57 > rowH) rowH = 57;
+          doc.text("Photo indisponible", px + COL_W / 2, y + fallbackH / 2 + 2, { align: "center" });
+          if (fallbackH > rowH) rowH = fallbackH;
         }
       }
-      y += rowH + 4;
+      y += rowH + 6;
     }
     y += 4;
   }
@@ -659,8 +676,6 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...MGRAY);
   doc.text(today + " \u00e0 " + timeStr + "  \u00b7  R\u00e9f. " + docRef, PW / 2, y + 13.5, { align: "center" });
-
-  drawFooter();
 
   // ── Output
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
