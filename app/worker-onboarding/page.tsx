@@ -46,7 +46,7 @@ export default function WorkerOnboarding() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-5 py-6">
       {/* Ambient */}
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-sky-600/8 blur-[100px]" />
@@ -57,26 +57,26 @@ export default function WorkerOnboarding() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors mb-8"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors mb-5"
         >
           ← Retour
         </button>
 
         {/* Header */}
-        <div className="mb-10">
-          <p className="text-sm font-semibold text-sky-400 uppercase tracking-widest mb-2">Terrain</p>
-          <h1 className="text-4xl font-black text-white leading-tight">
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-sky-400 uppercase tracking-widest mb-1.5">Terrain</p>
+          <h1 className="text-3xl font-black text-white leading-tight">
             Bonjour,<br />qui êtes-vous&nbsp;?
           </h1>
-          <p className="text-slate-400 mt-3 text-base">
+          <p className="text-slate-400 mt-2 text-sm">
             Entrez votre prénom et le code fourni par votre patron.
           </p>
         </div>
 
         {/* Form */}
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3.5">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Votre prénom
             </label>
             <input
@@ -86,12 +86,12 @@ export default function WorkerOnboarding() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-5 py-4 text-2xl font-bold text-white placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-xl font-bold text-white placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Code entreprise (4 chiffres)
             </label>
             <input
@@ -102,7 +102,7 @@ export default function WorkerOnboarding() {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
               onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-5 py-4 text-2xl font-bold text-white placeholder:text-slate-600 tracking-[0.5em] focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-xl font-bold text-white placeholder:text-slate-600 tracking-[0.5em] focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
             />
           </div>
 
@@ -116,7 +116,7 @@ export default function WorkerOnboarding() {
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit || loading}
-            className="mt-2 w-full rounded-xl bg-sky-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-sky-600/25 transition-all duration-200 hover:bg-sky-500 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full rounded-xl bg-sky-600 px-5 py-3 text-base font-bold text-white shadow-lg shadow-sky-600/25 transition-all duration-150 hover:bg-sky-500 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -129,7 +129,7 @@ export default function WorkerOnboarding() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-slate-600 mt-8">
+        <p className="text-center text-xs text-slate-600 mt-4">
           Votre patron vous communique le code lors de l&apos;onboarding.
         </p>
       </div>

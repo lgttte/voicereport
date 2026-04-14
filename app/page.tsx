@@ -51,7 +51,7 @@ function RoleCard({
       whileHover={{ y: -6, transition: { duration: 0.25, ease: "easeOut" } }}
       whileTap={{ scale: 0.98 }}
       className={`
-        group relative flex flex-col items-center text-center gap-6 p-8 sm:p-10 w-full
+        group relative flex flex-col items-center text-center gap-4 p-5 sm:p-7 w-full
         rounded-2xl border border-white/10 ${borderHover}
         bg-white/[0.04] backdrop-blur-lg
         transition-colors duration-300 cursor-pointer outline-none
@@ -63,14 +63,14 @@ function RoleCard({
       <div className={`pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${glowColor}`} />
 
       {/* Icon circle */}
-      <div className={`relative w-20 h-20 rounded-2xl ${iconBg} flex items-center justify-center shadow-lg ${iconGlow} transition-shadow duration-300 group-hover:scale-105 group-hover:transition-transform`}>
+      <div className={`relative w-16 h-16 rounded-2xl ${iconBg} flex items-center justify-center shadow-lg ${iconGlow} transition-shadow duration-300 group-hover:scale-105 group-hover:transition-transform`}>
         {icon}
       </div>
 
       {/* Text */}
       <div className="space-y-2">
-        <p className="text-xl font-bold text-white tracking-tight">{label}</p>
-        <p className="text-sm text-slate-400 leading-relaxed max-w-[200px]">{description}</p>
+        <p className="text-base font-bold text-white tracking-tight">{label}</p>
+        <p className="text-xs text-slate-400 leading-relaxed max-w-[200px]">{description}</p>
       </div>
 
       {/* CTA badge */}
@@ -106,7 +106,7 @@ export default function SplitScreen() {
   }
 
   return (
-    <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-5 py-16 overflow-hidden">
+    <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-5 py-8 overflow-hidden">
 
       {/* ── Ambient orbs ── */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -130,22 +130,22 @@ export default function SplitScreen() {
 
         {/* ── Header ── */}
         <motion.div
-          className="flex flex-col items-center text-center mb-14"
+          className="flex flex-col items-center text-center mb-8"
           variants={stagger}
           initial="hidden"
           animate="show"
         >
           {/* Logo */}
-          <motion.div variants={fadeDown} className="mb-6">
+          <motion.div variants={fadeDown} className="mb-4">
             <div className="relative">
               <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-2xl"
+                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl"
                 style={{
                   background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6d28d9 100%)",
                   boxShadow: "0 0 40px rgba(109, 40, 217, 0.45), 0 20px 40px rgba(0,0,0,0.4)",
                 }}
               >
-                <Mic className="w-9 h-9 text-white" />
+                <Mic className="w-7 h-7 text-white" />
               </div>
               {/* Online dot */}
               <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-slate-950 flex items-center justify-center">
@@ -157,7 +157,7 @@ export default function SplitScreen() {
           {/* Brand name */}
           <motion.h1
             variants={fadeDown}
-            className="text-4xl sm:text-5xl font-black tracking-tight mb-3"
+            className="text-3xl sm:text-4xl font-black tracking-tight mb-2"
             style={{
               background: "linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)",
               WebkitBackgroundClip: "text",
@@ -169,7 +169,7 @@ export default function SplitScreen() {
           </motion.h1>
 
           {/* Subtitle */}
-          <motion.p variants={fadeDown} className="text-slate-400 text-base sm:text-lg font-medium max-w-xs">
+          <motion.p variants={fadeDown} className="text-slate-400 text-sm sm:text-base font-medium max-w-xs">
             Comment utilisez-vous VoiceReport&nbsp;?
           </motion.p>
 
@@ -218,7 +218,7 @@ export default function SplitScreen() {
 
         {/* ── Footer ── */}
         <motion.div
-          className="flex items-center gap-1.5 mt-12 text-slate-600"
+          className="flex items-center gap-1.5 mt-6 text-slate-600"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1, transition: { delay: 0.9, duration: 0.6 } }}
         >

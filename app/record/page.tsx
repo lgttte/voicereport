@@ -1255,7 +1255,7 @@ export default function RecordPage() {
     ] as const;
 
     return (
-      <main className="relative min-h-screen bg-slate-950 flex flex-col pb-24 overflow-hidden">
+      <main className="relative min-h-screen bg-slate-950 flex flex-col pb-20 overflow-hidden">
         {/* Ambient */}
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-sky-600/10 blur-[140px]" />
@@ -1263,10 +1263,10 @@ export default function RecordPage() {
           <div className="absolute bottom-0 left-[20%] w-[400px] h-[300px] rounded-full bg-indigo-600/6 blur-[100px]" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center px-5 pt-14 pb-6 w-full max-w-lg mx-auto">
+        <div className="relative z-10 flex flex-col items-center px-4 pt-8 pb-4 w-full max-w-lg mx-auto">
           {/* Header */}
           <motion.div
-            className="text-center mb-10 w-full"
+            className="text-center mb-5 w-full"
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
           >
@@ -1275,35 +1275,36 @@ export default function RecordPage() {
                 Bonjour, <span className="text-slate-400">{workerName}</span>
               </p>
             )}
-            <h1 className="text-4xl font-black text-white tracking-tight mb-2">Nouveau rapport</h1>
-            <p className="text-base text-slate-400">Appuyez et décrivez votre journée</p>
+            <h1 className="text-3xl font-black text-white tracking-tight mb-1">Nouveau rapport</h1>
+            <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
           </motion.div>
 
           {/* Mic button */}
           <motion.div
-            className="flex flex-col items-center mb-10"
+            className="flex flex-col items-center mb-5"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            <div className="relative flex items-center justify-center mb-5">
-              <div className="absolute w-48 h-48 rounded-full border border-white/5" />
-              <div className="absolute w-36 h-36 rounded-full border border-white/8" />
+            <div className="relative flex items-center justify-center mb-4">
+              <div className="absolute w-36 h-36 rounded-full border border-white/5" />
+              <div className="absolute w-28 h-28 rounded-full border border-white/8" />
               <motion.button
                 type="button"
                 onClick={handleButtonClick}
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.94 }}
                 aria-label="Démarrer l'enregistrement"
-                className="relative w-28 h-28 rounded-full flex items-center justify-center"
+                className="relative w-22 h-22 rounded-full flex items-center justify-center"
                 style={{
+                  width: 88, height: 88,
                   background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                  boxShadow: "0 0 50px rgba(99,102,241,0.4), 0 0 100px rgba(37,99,235,0.15), 0 20px 40px rgba(0,0,0,0.5)",
+                  boxShadow: "0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(37,99,235,0.12), 0 16px 32px rgba(0,0,0,0.5)",
                 }}
               >
-                <Mic className="w-11 h-11 text-white" />
+                <Mic className="w-9 h-9 text-white" />
               </motion.button>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-5 py-3">
+            <div className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-4 py-2.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               <AnimatePresence mode="wait">
                 <motion.span
@@ -1327,21 +1328,21 @@ export default function RecordPage() {
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.25 } } }}
           >
-            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3 text-center">Vous pouvez mentionner</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 text-center">Vous pouvez mentionner</p>
+            <div className="grid grid-cols-2 gap-2">
               {GUIDE_ITEMS.map(({ icon: Icon, color, bg, glow, label, hint }) => (
                 <motion.div
                   key={label}
-                  variants={{ hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
-                  whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                  className={`group flex flex-col gap-3 p-4 rounded-2xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-300`}
+                  variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
+                  whileHover={{ y: -2, transition: { duration: 0.15 } }}
+                  className={`group flex items-center gap-2.5 p-3 rounded-xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-200`}
                 >
-                  <div className={`w-9 h-9 rounded-xl border ${bg} flex items-center justify-center`}>
-                    <Icon className={`w-4 h-4 ${color}`} />
+                  <div className={`w-8 h-8 rounded-lg border ${bg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-3.5 h-3.5 ${color}`} />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-white leading-tight">{label}</p>
-                    <p className="text-xs text-slate-500 mt-1 leading-snug">{hint}</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white leading-tight">{label}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">{hint}</p>
                   </div>
                 </motion.div>
               ))}
@@ -1489,11 +1490,11 @@ export default function RecordPage() {
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-lg mx-auto px-4 pt-12 pb-6">
+      <div className="relative z-10 w-full max-w-lg mx-auto px-4 pt-8 pb-4">
 
         {/* Breadcrumb */}
         <motion.div
-          className="flex items-center gap-1.5 text-xs text-slate-600 mb-8"
+          className="flex items-center gap-1.5 text-xs text-slate-600 mb-4"
           initial={{ opacity: 0, x: -8 }}
           animate={{ opacity: 1, x: 0, transition: { duration: 0.4, ease: EASE } }}
         >
@@ -1511,7 +1512,7 @@ export default function RecordPage() {
 
         {/* Score hero card */}
         <motion.div
-          className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md overflow-hidden mb-5 p-6"
+          className="relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-md overflow-hidden mb-3 p-4"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
         >
@@ -1519,12 +1520,12 @@ export default function RecordPage() {
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-3 min-w-0">
-              <span className={`inline-flex self-start items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest ${bs.pill}`}>
+              <span className={`inline-flex self-start items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${bs.pill}`}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
                 {statutLabel[statutLevel]}
               </span>
               <div className="space-y-0.5">
-                <p className="text-lg font-black text-white leading-tight">
+                <p className="text-base font-black text-white leading-tight">
                   {chantierName || "Rapport du jour"}
                 </p>
                 <p className="text-xs text-slate-500">
@@ -1568,7 +1569,7 @@ export default function RecordPage() {
         {/* Alertes critiques */}
         {alertes.length > 0 && (
           <motion.div
-            className="rounded-2xl border border-red-500/25 bg-red-500/8 backdrop-blur-sm mb-5 overflow-hidden"
+            className="rounded-2xl border border-red-500/25 bg-red-500/8 backdrop-blur-sm mb-3 overflow-hidden"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.1 } }}
           >
@@ -1602,7 +1603,7 @@ export default function RecordPage() {
         </motion.p>
 
         {/* 4 report cards */}
-        <div className="space-y-3 mb-5">
+        <div className="space-y-2 mb-3">
           {reportCards.map(({ label, items, icon: Icon, color, bg, border, dot, empty }, idx) => (
             <motion.div
               key={label}
@@ -1612,13 +1613,13 @@ export default function RecordPage() {
               animate="show"
               className={`relative rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm border-l-4 ${border} overflow-hidden`}
             >
-              <div className="flex items-start gap-4 p-4">
+              <div className="flex items-start gap-3 p-3">
                 <div className={`w-9 h-9 rounded-xl border ${bg} flex items-center justify-center shrink-0 mt-0.5`}>
                   <Icon className={`w-4 h-4 ${color}`} />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white mb-2">{label}</p>
+                  <p className="text-xs font-bold text-white mb-1.5">{label}</p>
                   {items.length > 0 ? (
                     <ul className="space-y-1.5">
                       {(items as readonly string[]).map((item, i) => (
@@ -1654,11 +1655,11 @@ export default function RecordPage() {
 
         {/* Photos upload */}
         <motion.div
-          className="rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-3 overflow-hidden"
+          className="rounded-xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-2.5 overflow-hidden"
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.52 } }}
         >
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/6">
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-white/6">
             <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
               <Camera className="w-4 h-4 text-sky-400" />
             </div>
@@ -1713,7 +1714,7 @@ export default function RecordPage() {
 
         {/* Email input */}
         <motion.div
-          className="rounded-2xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-4 flex items-center gap-3 px-4 py-3.5"
+          className="rounded-xl border border-white/8 bg-white/[0.03] backdrop-blur-sm mb-3 flex items-center gap-3 px-3.5 py-3"
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.58 } }}
         >

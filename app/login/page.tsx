@@ -39,7 +39,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-gray-950 flex flex-col items-center justify-center px-5 py-6">
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute top-[-15%] right-[-10%] w-[500px] h-[500px] rounded-full bg-violet-600/8 blur-[100px]" />
       </div>
@@ -48,22 +48,22 @@ export default function AdminLogin() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors mb-8"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300 transition-colors mb-5"
         >
           ← Retour
         </button>
 
-        <div className="mb-10">
-          <p className="text-sm font-semibold text-violet-400 uppercase tracking-widest mb-2">Admin</p>
-          <h1 className="text-4xl font-black text-white leading-tight">Espace patron</h1>
-          <p className="text-slate-400 mt-3 text-base">
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-1.5">Admin</p>
+          <h1 className="text-3xl font-black text-white leading-tight">Espace patron</h1>
+          <p className="text-slate-400 mt-2 text-sm">
             Entrez votre code entreprise pour accéder au dashboard.
           </p>
         </div>
 
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3.5">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Code entreprise (4 chiffres)
             </label>
             <input
@@ -75,7 +75,7 @@ export default function AdminLogin() {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
               onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-5 py-4 text-3xl font-black text-white placeholder:text-slate-700 tracking-[0.6em] text-center focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-2xl font-black text-white placeholder:text-slate-700 tracking-[0.6em] text-center focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
             />
           </div>
 
@@ -89,7 +89,7 @@ export default function AdminLogin() {
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit || loading}
-            className="w-full rounded-xl bg-violet-600 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-violet-600/25 transition-all duration-200 hover:bg-violet-500 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full rounded-xl bg-violet-600 px-5 py-3 text-base font-bold text-white shadow-lg shadow-violet-600/25 transition-all duration-150 hover:bg-violet-500 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -102,7 +102,7 @@ export default function AdminLogin() {
           </button>
         </div>
 
-        <div className="mt-10 rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+        <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900/50 p-3.5">
           <p className="text-xs text-slate-500 mb-3 font-semibold uppercase tracking-widest">Pas encore inscrit ?</p>
           <p className="text-sm text-slate-400">
             Créez votre entreprise pour obtenir votre code :
