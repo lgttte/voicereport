@@ -1255,7 +1255,7 @@ export default function RecordPage() {
     ] as const;
 
     return (
-      <main className="relative min-h-screen bg-slate-950 flex flex-col pb-20 overflow-hidden">
+      <main className="relative bg-slate-950 overflow-hidden" style={{ height: "100dvh" }}>
         {/* Ambient */}
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-sky-600/10 blur-[140px]" />
@@ -1263,15 +1263,17 @@ export default function RecordPage() {
           <div className="absolute bottom-0 left-[20%] w-[400px] h-[300px] rounded-full bg-indigo-600/6 blur-[100px]" />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center px-4 pt-8 pb-4 w-full max-w-lg mx-auto">
+        {/* Full-height column: header → mic (flex-1 centered) → cards pinned to bottom */}
+        <div className="relative z-10 flex flex-col h-full w-full max-w-lg mx-auto px-4" style={{ paddingBottom: 72 }}>
+
           {/* Header */}
           <motion.div
-            className="text-center mb-5 w-full"
+            className="text-center pt-8 pb-4 w-full shrink-0"
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
           >
             {workerName && (
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
                 Bonjour, <span className="text-slate-400">{workerName}</span>
               </p>
             )}
@@ -1279,29 +1281,29 @@ export default function RecordPage() {
             <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
           </motion.div>
 
-          {/* Mic button */}
+          {/* Mic button — takes remaining vertical space, centers the button */}
           <motion.div
-            className="flex flex-col items-center mb-5"
+            className="flex-1 flex flex-col items-center justify-center"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            <div className="relative flex items-center justify-center mb-4">
-              <div className="absolute w-36 h-36 rounded-full border border-white/5" />
-              <div className="absolute w-28 h-28 rounded-full border border-white/8" />
+            <div className="relative flex items-center justify-center mb-5">
+              <div className="absolute w-52 h-52 rounded-full border border-white/5" />
+              <div className="absolute w-40 h-40 rounded-full border border-white/8" />
               <motion.button
                 type="button"
                 onClick={handleButtonClick}
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.94 }}
                 aria-label="Démarrer l'enregistrement"
-                className="relative w-22 h-22 rounded-full flex items-center justify-center"
+                className="relative rounded-full flex items-center justify-center"
                 style={{
-                  width: 88, height: 88,
+                  width: 128, height: 128,
                   background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                  boxShadow: "0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(37,99,235,0.12), 0 16px 32px rgba(0,0,0,0.5)",
+                  boxShadow: "0 0 60px rgba(99,102,241,0.45), 0 0 120px rgba(37,99,235,0.15), 0 20px 40px rgba(0,0,0,0.5)",
                 }}
               >
-                <Mic className="w-9 h-9 text-white" />
+                <Mic className="w-14 h-14 text-white" />
               </motion.button>
             </div>
             <div className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-4 py-2.5">
@@ -1321,13 +1323,22 @@ export default function RecordPage() {
             </div>
           </motion.div>
 
-          {/* Guide cards */}
+          {/* Guide cards — pinned at bottom */}
           <motion.div
-            className="w-full"
+            className="w-full shrink-0 pb-3"
             initial="hidden"
             animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.25 } } }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
           >
+            {offlineQueue.length > 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 w-full flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5">
+                <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300 flex-1">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
+                {typeof navigator !== "undefined" && navigator.onLine && (
+                  <button type="button" onClick={() => window.dispatchEvent(new Event("online"))} className="text-[10px] text-amber-400 font-semibold hover:text-amber-300">Réessayer</button>
+                )}
+              </motion.div>
+            )}
             <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 text-center">Vous pouvez mentionner</p>
             <div className="grid grid-cols-2 gap-2">
               {GUIDE_ITEMS.map(({ icon: Icon, color, bg, glow, label, hint }) => (
@@ -1348,17 +1359,6 @@ export default function RecordPage() {
               ))}
             </div>
           </motion.div>
-
-          {/* Offline banner */}
-          {offlineQueue.length > 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-5 w-full flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
-              <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
-              <p className="text-xs text-amber-300 flex-1">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
-              {typeof navigator !== "undefined" && navigator.onLine && (
-                <button type="button" onClick={() => window.dispatchEvent(new Event("online"))} className="text-[10px] text-amber-400 font-semibold hover:text-amber-300">Réessayer</button>
-              )}
-            </motion.div>
-          )}
         </div>
 
         {/* Bottom nav */}
@@ -1390,11 +1390,6 @@ export default function RecordPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="relative z-10 flex items-center justify-center gap-1.5 py-3 mt-2">
-          <Lock className="w-3 h-3 text-slate-700" />
-          <p className="text-xs text-slate-700">Vos données sont sécurisées et cryptées</p>
         </div>
       </main>
     );
