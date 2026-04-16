@@ -92,7 +92,7 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
     return arr.filter(s => !PLACEHOLDER_RE.test(s));
   };
 
-  /** Sanitize emojis that jsPDF cannot render */
+  /** Sanitize emojis and non-Latin-1 chars that jsPDF/Helvetica cannot render */
   const sanitizeEmoji = (text: string): string =>
     text
       .replace(/⚠️/g, "[Attention]")
@@ -100,6 +100,8 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
       .replace(/🟢/g, "")
       .replace(/🟠/g, "")
       .replace(/🔴/g, "")
+      // Strip ALL characters outside printable Latin-1 range (keeps French accents: é è à ç ê etc.)
+      .replace(/[^\x20-\x7E\xA0-\xFF]/g, "")
       .replace(/\s{2,}/g, " ")
       .trim();
 
@@ -239,25 +241,51 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
   doc.setFillColor(...WHITE);
   doc.rect(0, 3.5, PW, 30, "F");
 
-  // "VR" circle logo
-  doc.setFillColor(...BLUE_D);
-  doc.circle(ML + 6, 18.5, 6, "F");
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...WHITE);
-  doc.text("VR", ML + 6, 20.8, { align: "center" });
-
-  // Brand name
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(...BLUE_D);
-  doc.text("VoiceReport", ML + 16, 17.5);
-
-  // Subtitle
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...MGRAY);
-  doc.text("Rapports de chantier BTP", ML + 16, 23.5);
+  // Logo (image si disponible, sinon fallback "VR" circle + texte)
+  if (logoDataUrl) {
+    // Fit logo in left header zone: max 55mm wide, 22mm tall, vertically centred (y=5.5 → 27.5)
+    try {
+      const props = doc.getImageProperties(logoDataUrl);
+      const maxW = 55, maxH = 22;
+      let lw = maxW;
+      let lh = lw * (props.height / props.width);
+      if (lh > maxH) { lh = maxH; lw = lh * (props.width / props.height); }
+      const ly = 3.5 + (30 - lh) / 2; // vertically centre inside the 30mm white band
+      doc.addImage(logoDataUrl, "PNG", ML, ly, lw, lh);
+    } catch {
+      // If addImage fails for any reason, fall back to text mark
+      doc.setFillColor(...BLUE_D);
+      doc.circle(ML + 6, 18.5, 6, "F");
+      doc.setFontSize(7.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...WHITE);
+      doc.text("VR", ML + 6, 20.8, { align: "center" });
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...BLUE_D);
+      doc.text("VoiceReport", ML + 16, 17.5);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...MGRAY);
+      doc.text("Rapports de chantier BTP", ML + 16, 23.5);
+    }
+  } else {
+    // Fallback: "VR" circle + texte
+    doc.setFillColor(...BLUE_D);
+    doc.circle(ML + 6, 18.5, 6, "F");
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...WHITE);
+    doc.text("VR", ML + 6, 20.8, { align: "center" });
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...BLUE_D);
+    doc.text("VoiceReport", ML + 16, 17.5);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...MGRAY);
+    doc.text("Rapports de chantier BTP", ML + 16, 23.5);
+  }
 
   // Right: document label + date
   doc.setFontSize(11);

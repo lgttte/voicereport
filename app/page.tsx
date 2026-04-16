@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { HardHat, LayoutDashboard, ArrowRight, Lock, Mic } from "lucide-react";
+import Image from "next/image";
+import { HardHat, LayoutDashboard, ArrowRight, Lock } from "lucide-react";
 
 // ── Animation variants ────────────────────────────────────────────────────────
 
@@ -80,24 +81,19 @@ function RoleCard({
 
 export default function SplitScreen() {
   const router = useRouter();
-  const [checking, setChecking] = useState(true);
+
+  // Lire localStorage en init synchrone — pas de spinner, pas de flash
+  const [redirecting] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("worker_device_id");
+  });
 
   useEffect(() => {
-    const deviceId = localStorage.getItem("worker_device_id");
-    if (deviceId) {
-      router.replace("/record");
-    } else {
-      setChecking(false);
-    }
-  }, [router]);
+    if (redirecting) router.replace("/record");
+  }, [redirecting, router]);
 
-  if (checking) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
+  // En attente de la redirection : renvoyer null, pas de spinner visible
+  if (redirecting) return null;
 
   return (
     <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-5 py-8 overflow-hidden">
@@ -130,37 +126,21 @@ export default function SplitScreen() {
           animate="show"
         >
           {/* Logo */}
-          <motion.div variants={fadeDown} className="mb-4">
-            <div className="relative">
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl"
-                style={{
-                  background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6d28d9 100%)",
-                  boxShadow: "0 0 40px rgba(109, 40, 217, 0.45), 0 20px 40px rgba(0,0,0,0.4)",
-                }}
-              >
-                <Mic className="w-7 h-7 text-white" />
-              </div>
-              {/* Online dot */}
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-400 border-2 border-slate-950 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-white" />
-              </div>
+          <motion.div variants={fadeDown} className="mb-5">
+            <div
+              className="rounded-2xl overflow-hidden shadow-2xl"
+              style={{ boxShadow: "0 0 40px rgba(109,40,217,0.3), 0 20px 40px rgba(0,0,0,0.4)" }}
+            >
+              <Image
+                src="/logo.png"
+                alt="VoiceReport"
+                width={180}
+                height={60}
+                priority
+                className="h-auto w-44 sm:w-[180px] object-contain"
+              />
             </div>
           </motion.div>
-
-          {/* Brand name */}
-          <motion.h1
-            variants={fadeDown}
-            className="text-3xl sm:text-4xl font-black tracking-tight mb-2"
-            style={{
-              background: "linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            VoiceReport
-          </motion.h1>
 
           {/* Subtitle */}
           <motion.p variants={fadeDown} className="text-slate-400 text-sm sm:text-base font-medium max-w-xs">

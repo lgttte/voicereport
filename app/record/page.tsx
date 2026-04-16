@@ -160,12 +160,16 @@ function saveOfflineQueue(queue: OfflineQueueItem[]) {
   localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  const buf = await file.arrayBuffer();
-  let binary = "";
-  const bytes = new Uint8Array(buf);
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 function base64ToBlob(b64: string, type: string): Blob {
@@ -291,7 +295,10 @@ export default function RecordPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [report, setReport] = useState<ReportSections | null>(null);
   const [reportText, setReportText] = useState("");
-  const [recipientEmail, setRecipientEmail] = useState("");
+  // Init sync depuis localStorage — élimine le flash "null → rendu"
+  const [recipientEmail, setRecipientEmail] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("lastRecipientEmail") || "" : ""
+  );
   const [photoPreviews, setPhotoPreviews] = useState<{ file: File; previewUrl: string }[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -300,25 +307,33 @@ export default function RecordPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackTime, setPlaybackTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [savedReports, setSavedReports] = useState<SavedReport[]>(() => loadHistory());
   const [dashboardChantier, setDashboardChantier] = useState<Chantier | null>(null);
   const [dashboardReportDetail, setDashboardReportDetail] = useState<SavedReport | null>(null);
 
   const [encourageIdx, setEncourageIdx] = useState(0);
-  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
+  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>(() => loadOfflineQueue());
   const [offlineBanner, setOfflineBanner] = useState(false);
   // ── Enrichment step state ──
-  const [chantierList, setChantierList] = useState<ChantierEntry[]>([]);
+  const [chantierList, setChantierList] = useState<ChantierEntry[]>(() => loadChantiers());
   const [enrichChantierSearch, setEnrichChantierSearch] = useState("");
-  const [enrichSelectedChantier, setEnrichSelectedChantier] = useState<string | null>(null);
+  const [enrichSelectedChantier, setEnrichSelectedChantier] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem(LAST_CHANTIER_KEY) : null
+  );
   const [enrichEtat, setEnrichEtat] = useState<"fluide" | "difficile" | "critique" | null>(null);
   const [enrichUrgent, setEnrichUrgent] = useState<boolean | null>(null);
   const [enrichTypeJournee, setEnrichTypeJournee] = useState<"normal" | "retard" | "blocage" | "incident" | null>(null);
   const [enrichment, setEnrichment] = useState<EnrichmentData | null>(null);
-  // ── Worker identity (from localStorage after /worker-onboarding) ──
-  const [workerName, setWorkerName] = useState<string>("");
-  const [workerDeviceId, setWorkerDeviceId] = useState<string | null>(null);
-  const [workerCompanyId, setWorkerCompanyId] = useState<string | null>(null);
+  // ── Worker identity — init sync pour éviter le rendu "null" initial ──
+  const [workerName, setWorkerName] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("worker_name") || "" : ""
+  );
+  const [workerDeviceId, setWorkerDeviceId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("worker_device_id") : null
+  );
+  const [workerCompanyId, setWorkerCompanyId] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("worker_company_id") : null
+  );
   const [currentGeo, setCurrentGeo] = useState<GeoLocation | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1138,13 +1153,13 @@ export default function RecordPage() {
             <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
           </motion.div>
 
-          {/* Mic button — takes remaining vertical space, centers slightly above mid */}
+          {/* Mic button — poussé vers le bas pour réduire le vide entre le sous-titre et les cartes */}
           <motion.div
-            className="flex-1 flex flex-col items-center justify-center pb-4"
+            className="flex-1 flex flex-col items-center justify-end pb-[15px]"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            <div className="relative flex items-center justify-center mb-5">
+            <div className="relative flex items-center justify-center mb-4">
               <div className="absolute w-52 h-52 rounded-full border border-white/5" />
               <div className="absolute w-40 h-40 rounded-full border border-white/8" />
               <motion.button
@@ -1180,7 +1195,7 @@ export default function RecordPage() {
             </div>
           </motion.div>
 
-          {/* Guide cards — pinned at bottom */}
+          {/* Guide cards — épinglées en bas, grille aérée */}
           <motion.div
             className="w-full shrink-0 pb-3"
             initial="hidden"
@@ -1196,21 +1211,21 @@ export default function RecordPage() {
                 )}
               </motion.div>
             )}
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 text-center">Vous pouvez mentionner</p>
-            <div className="grid grid-cols-2 gap-2">
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-3 text-center">Vous pouvez mentionner</p>
+            <div className="grid grid-cols-2 gap-5">
               {GUIDE_ITEMS.map(({ icon: Icon, color, bg, glow, label, hint }) => (
                 <motion.div
                   key={label}
                   variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
                   whileHover={{ y: -2, transition: { duration: 0.15 } }}
-                  className={`group flex items-center gap-2.5 p-3 rounded-xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-200`}
+                  className={`group flex items-center gap-3 p-4 rounded-xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-200`}
                 >
-                  <div className={`w-8 h-8 rounded-lg border ${bg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`w-3.5 h-3.5 ${color}`} />
+                  <div className={`w-10 h-10 rounded-lg border ${bg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-4.5 h-4.5 ${color}`} style={{ width: 18, height: 18 }} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white leading-tight">{label}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">{hint}</p>
+                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">{hint}</p>
                   </div>
                 </motion.div>
               ))}
