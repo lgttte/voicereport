@@ -1153,45 +1153,51 @@ export default function RecordPage() {
             <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
           </motion.div>
 
-          {/* Mic button — poussé vers le bas pour réduire le vide entre le sous-titre et les cartes */}
+          {/* Mic button — poussé vers le bas, bouton agrandi, espacement strict avec la boîte */}
           <motion.div
             className="flex-1 flex flex-col items-center justify-end pb-[15px]"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            <div className="relative flex items-center justify-center mb-4">
-              <div className="absolute w-52 h-52 rounded-full border border-white/5" />
-              <div className="absolute w-40 h-40 rounded-full border border-white/8" />
-              <motion.button
-                type="button"
-                onClick={handleButtonClick}
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
-                aria-label="Démarrer l'enregistrement"
-                className="relative rounded-full flex items-center justify-center"
-                style={{
-                  width: 128, height: 128,
-                  background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                  boxShadow: "0 0 60px rgba(99,102,241,0.45), 0 0 120px rgba(37,99,235,0.15), 0 20px 40px rgba(0,0,0,0.5)",
-                }}
-              >
-                <Mic className="w-14 h-14 text-white" />
-              </motion.button>
-            </div>
-            <div className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-4 py-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={encourageIdx}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-sm text-slate-300 font-medium"
+            {/* Colonne centrée : gap-9 (36px) garantit qu'aucune ombre ne touche la boîte */}
+            <div className="flex flex-col items-center gap-9">
+              {/* Bouton mic agrandi w-40/h-40 (160px) + anneaux décoratifs recalibrés */}
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-64 h-64 rounded-full border border-white/5" />
+                <div className="absolute w-52 h-52 rounded-full border border-white/8" />
+                <motion.button
+                  type="button"
+                  onClick={handleButtonClick}
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  aria-label="Démarrer l'enregistrement"
+                  className="relative rounded-full flex items-center justify-center"
+                  style={{
+                    width: 160, height: 160,
+                    background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
+                    boxShadow: "0 0 50px rgba(99,102,241,0.40), 0 0 100px rgba(37,99,235,0.12), 0 16px 36px rgba(0,0,0,0.5)",
+                  }}
                 >
-                  {ENCOURAGEMENT_PHRASES[encourageIdx]}
-                </motion.span>
-              </AnimatePresence>
+                  <Mic className="w-16 h-16 text-white" />
+                </motion.button>
+              </div>
+
+              {/* Boîte d'instruction — séparée par gap-9, aucun risque de superposition */}
+              <div className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-4 py-2.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={encourageIdx}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm text-slate-300 font-medium"
+                  >
+                    {ENCOURAGEMENT_PHRASES[encourageIdx]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
 
