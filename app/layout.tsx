@@ -18,6 +18,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#111827",
+  viewportFit: "cover", // expose env(safe-area-inset-*) sur iOS Safari
 };
 
 export default function RootLayout({

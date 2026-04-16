@@ -1136,7 +1136,8 @@ export default function RecordPage() {
         </div>
 
         {/* Full-height column: header → mic (flex-1 centered) → cards pinned to bottom */}
-        <div className="relative z-10 flex flex-col h-full w-full max-w-lg mx-auto px-4" style={{ paddingBottom: 72 }}>
+        {/* paddingBottom = hauteur nav (~72px) + safe-area iOS (~34px sur iPhone) */}
+        <div className="relative z-10 flex flex-col h-full w-full max-w-lg mx-auto px-4" style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}>
 
           {/* Header */}
           <motion.div
@@ -1239,8 +1240,8 @@ export default function RecordPage() {
           </motion.div>
         </div>
 
-        {/* Bottom nav */}
-        <div className="fixed bottom-0 inset-x-0 z-20">
+        {/* Bottom nav — z-50 + safe-area-inset-bottom pour iOS */}
+        <div className="fixed bottom-0 inset-x-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           <div className="mx-auto max-w-lg px-4">
             <div className="rounded-t-2xl border border-white/8 bg-slate-950/90 backdrop-blur-xl px-2 py-3">
               <div className="flex items-center justify-around">
