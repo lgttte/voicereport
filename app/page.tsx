@@ -96,7 +96,7 @@ export default function SplitScreen() {
   if (redirecting) return null;
 
   return (
-    <main className="relative min-h-screen bg-slate-950 flex flex-col items-center justify-center px-5 py-8 overflow-hidden">
+    <main className="relative h-[100dvh] bg-slate-950 flex flex-col items-center justify-center px-5 py-8 overflow-hidden">
 
       {/* ── Ambient orbs ── */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
