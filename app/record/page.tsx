@@ -1150,8 +1150,7 @@ export default function RecordPage() {
                 Bonjour, <span className="text-slate-400">{workerName}</span>
               </p>
             )}
-            <h1 className="text-3xl font-black text-white tracking-tight mb-1">Nouveau rapport</h1>
-            <p className="text-sm text-slate-400">Appuyez et décrivez votre journée</p>
+            <h1 className="text-3xl font-black text-white tracking-tight">Nouveau rapport</h1>
           </motion.div>
 
           {/* Mic button — centré dans l'espace disponible, stable sur tous formats d'écran */}
