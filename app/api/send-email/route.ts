@@ -243,10 +243,10 @@ async function generateReportPDFWithPhotos(reportRaw: string, photos: File[], ph
 
   // Logo (image si disponible, sinon fallback "VR" circle + texte)
   if (logoDataUrl) {
-    // Fit logo in left header zone: max 55mm wide, 22mm tall, vertically centred (y=5.5 → 27.5)
+    // Logo carré 1080x1080 — affiché 26x26mm, centré verticalement dans la bande blanche de 30mm
     try {
       const props = doc.getImageProperties(logoDataUrl);
-      const maxW = 55, maxH = 22;
+      const maxW = 26, maxH = 26;
       let lw = maxW;
       let lh = lw * (props.height / props.width);
       if (lh > maxH) { lh = maxH; lw = lh * (props.width / props.height); }

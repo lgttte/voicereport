@@ -126,18 +126,18 @@ export default function SplitScreen() {
           animate="show"
         >
           {/* Logo */}
-          <motion.div variants={fadeDown} className="mb-5">
+          <motion.div variants={fadeDown} className="mb-6">
             <div
-              className="rounded-2xl overflow-hidden shadow-2xl"
-              style={{ boxShadow: "0 0 40px rgba(109,40,217,0.3), 0 20px 40px rgba(0,0,0,0.4)" }}
+              className="rounded-3xl overflow-hidden"
+              style={{ boxShadow: "0 0 48px rgba(109,40,217,0.28), 0 20px 40px rgba(0,0,0,0.45)" }}
             >
               <Image
                 src="/logo.png"
                 alt="VoiceReport"
-                width={180}
-                height={60}
+                width={120}
+                height={120}
                 priority
-                className="h-auto w-44 sm:w-[180px] object-contain"
+                className="w-28 h-28 sm:w-32 sm:h-32 object-cover"
               />
             </div>
           </motion.div>
