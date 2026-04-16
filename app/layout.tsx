@@ -42,7 +42,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="bg-gray-900 text-white antialiased overflow-hidden h-[100dvh]">{children}</body>
+      <body className="bg-gray-900 text-white antialiased">{children}</body>
     </html>
   );
 }
