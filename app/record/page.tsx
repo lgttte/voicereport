@@ -1127,24 +1127,19 @@ export default function RecordPage() {
     ] as const;
 
     return (
-      <main
-        className="relative bg-slate-950 overflow-hidden flex flex-col"
-        style={{ height: "100dvh" }}
-      >
-        {/* Ambient — très subtil, pas de glassmorphism */}
+      <main className="relative min-h-screen bg-slate-950 flex flex-col">
+
+        {/* Ambient — discret, pas de barre bleue visible */}
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_-5%,rgba(30,58,138,0.20),transparent)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_100%,rgba(30,58,138,0.14),transparent)]" />
         </div>
 
-        {/* Colonne principale — distribue tout l'espace vertical sans scroll */}
-        <div
-          className="relative z-10 flex flex-col flex-1 w-full max-w-lg mx-auto px-5 min-h-0"
-          style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
-        >
+        {/* Colonne principale — scrollable, contenu depuis le haut */}
+        <div className="relative z-10 flex flex-col w-full max-w-lg mx-auto px-5 pb-32">
 
-          {/* ── Header ── */}
+          {/* ── Header — commence en haut, pas de grand vide ── */}
           <motion.div
-            className="text-center pt-5 pb-2 shrink-0"
+            className="text-center pt-8 pb-4"
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
           >
@@ -1156,9 +1151,9 @@ export default function RecordPage() {
             <h1 className="text-2xl font-black text-white tracking-tight">Nouveau rapport</h1>
           </motion.div>
 
-          {/* ── Bouton micro — centré dans l'espace restant ── */}
+          {/* ── Bouton micro — marges fixes, pas de justify-center ── */}
           <motion.div
-            className="flex-1 flex flex-col items-center justify-center min-h-0"
+            className="flex flex-col items-center mt-4 mb-8"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
@@ -1187,8 +1182,8 @@ export default function RecordPage() {
               </motion.button>
             </div>
 
-            {/* ── Panneau de statut — bloc physique, mt-6 sous le bouton ── */}
-            <div className="mt-6 w-full">
+            {/* ── Panneau de statut — mt-8 sous le bouton ── */}
+            <div className="mt-8 w-full">
               <div
                 className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5"
                 style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)" }}
@@ -1213,9 +1208,9 @@ export default function RecordPage() {
             </div>
           </motion.div>
 
-          {/* ── Grille des 4 cartes — épinglée en bas ── */}
+          {/* ── Grille des 4 cartes — pb-32 sur le conteneur parent garantit le scroll ── */}
           <motion.div
-            className="w-full shrink-0 pb-2"
+            className="w-full"
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.18 } } }}
@@ -1224,7 +1219,7 @@ export default function RecordPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mb-2.5 w-full flex items-center gap-2.5 rounded-xl border border-amber-600/50 bg-amber-950/40 px-3 py-2"
+                className="mb-3 w-full flex items-center gap-2.5 rounded-xl border border-amber-600/50 bg-amber-950/40 px-3 py-2"
                 style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.45)" }}
               >
                 <WifiOff className="h-3.5 w-3.5 text-amber-400 shrink-0" />
@@ -1243,7 +1238,7 @@ export default function RecordPage() {
               </motion.div>
             )}
 
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 text-center">
               Vous pouvez mentionner
             </p>
 
