@@ -1128,40 +1128,44 @@ export default function RecordPage() {
 
     return (
       <main
-        className="relative bg-slate-950 min-h-screen"
-        style={{ paddingBottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}
+        className="relative bg-slate-950 overflow-hidden flex flex-col"
+        style={{ height: "100dvh" }}
       >
         {/* Ambient — très subtil, pas de glassmorphism */}
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_-5%,rgba(30,58,138,0.20),transparent)]" />
         </div>
 
-        <div className="relative z-10 flex flex-col w-full max-w-lg mx-auto px-5">
+        {/* Colonne principale — distribue tout l'espace vertical sans scroll */}
+        <div
+          className="relative z-10 flex flex-col flex-1 w-full max-w-lg mx-auto px-5 min-h-0"
+          style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}
+        >
 
           {/* ── Header ── */}
           <motion.div
-            className="text-center pt-10 pb-6 shrink-0"
+            className="text-center pt-5 pb-2 shrink-0"
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
           >
             {workerName && (
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">
                 Bonjour, <span className="text-slate-400">{workerName}</span>
               </p>
             )}
-            <h1 className="text-3xl font-black text-white tracking-tight">Nouveau rapport</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Nouveau rapport</h1>
           </motion.div>
 
-          {/* ── Bouton micro — massif, tactile, "interphone" ── */}
+          {/* ── Bouton micro — centré dans l'espace restant ── */}
           <motion.div
-            className="flex flex-col items-center"
+            className="flex-1 flex flex-col items-center justify-center min-h-0"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            <div className="relative flex items-center justify-center py-4">
-              {/* Anneaux décoratifs solides — look "tour de contrôle" */}
-              <div className="absolute w-64 h-64 rounded-full border border-slate-800" />
-              <div className="absolute w-52 h-52 rounded-full border border-slate-700/70" />
+            <div className="relative flex items-center justify-center">
+              {/* Anneaux décoratifs solides */}
+              <div className="absolute w-52 h-52 rounded-full border border-slate-800" />
+              <div className="absolute w-44 h-44 rounded-full border border-slate-700/70" />
 
               <motion.button
                 type="button"
@@ -1171,27 +1175,26 @@ export default function RecordPage() {
                 aria-label="Démarrer l'enregistrement"
                 className="relative rounded-full flex items-center justify-center"
                 style={{
-                  width: 164,
-                  height: 164,
+                  width: 148,
+                  height: 148,
                   background: "linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%)",
                   boxShadow:
-                    "0 0 0 4px rgba(37,99,235,0.18), 0 0 55px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.14), 0 22px 50px rgba(0,0,0,0.65)",
+                    "0 0 0 4px rgba(37,99,235,0.18), 0 0 50px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.14), 0 18px 40px rgba(0,0,0,0.65)",
                 }}
               >
-                {/* Bord biseauté intérieur — effet bouton physique */}
-                <div className="absolute inset-[14px] rounded-full border border-white/10 pointer-events-none" />
-                <Mic className="w-16 h-16 text-white relative z-10" />
+                <div className="absolute inset-[12px] rounded-full border border-white/10 pointer-events-none" />
+                <Mic className="w-14 h-14 text-white relative z-10" />
               </motion.button>
             </div>
 
-            {/* ── Panneau de statut — bloc physique, mt-10 obligatoire ── */}
-            <div className="mt-10 w-full">
+            {/* ── Panneau de statut — bloc physique, mt-6 sous le bouton ── */}
+            <div className="mt-6 w-full">
               <div
-                className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3.5"
+                className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5"
                 style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)" }}
               >
                 <span
-                  className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"
+                  className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse"
                   style={{ boxShadow: "0 0 8px rgba(52,211,153,0.75)" }}
                 />
                 <AnimatePresence mode="wait">
@@ -1210,21 +1213,21 @@ export default function RecordPage() {
             </div>
           </motion.div>
 
-          {/* ── Grille des 4 cartes ── */}
+          {/* ── Grille des 4 cartes — épinglée en bas ── */}
           <motion.div
-            className="w-full mt-8"
+            className="w-full shrink-0 pb-2"
             initial="hidden"
             animate="show"
-            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.18 } } }}
           >
             {offlineQueue.length > 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mb-4 w-full flex items-center gap-2.5 rounded-xl border border-amber-600/50 bg-amber-950/40 px-4 py-3"
+                className="mb-2.5 w-full flex items-center gap-2.5 rounded-xl border border-amber-600/50 bg-amber-950/40 px-3 py-2"
                 style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.45)" }}
               >
-                <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
+                <WifiOff className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 <p className="text-xs text-amber-200 flex-1 font-semibold">
                   {offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi
                 </p>
@@ -1240,24 +1243,24 @@ export default function RecordPage() {
               </motion.div>
             )}
 
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 text-center">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2.5 text-center">
               Vous pouvez mentionner
             </p>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {GUIDE_ITEMS.map(({ icon: Icon, color, iconBg, label, hint }) => (
                 <motion.div
                   key={label}
-                  variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
-                  className="flex items-center gap-3 p-4 rounded-xl border border-slate-700 bg-slate-900"
-                  style={{ boxShadow: "0 4px 18px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.03)" }}
+                  variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } }}
+                  className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-700 bg-slate-900"
+                  style={{ boxShadow: "0 4px 14px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.03)" }}
                 >
-                  <div className={`w-10 h-10 rounded-lg border ${iconBg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`w-5 h-5 ${color}`} />
+                  <div className={`w-9 h-9 rounded-lg border ${iconBg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-4 h-4 ${color}`} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white leading-tight">{label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-snug">{hint}</p>
+                    <p className="text-xs font-semibold text-white leading-tight">{label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5 leading-snug">{hint}</p>
                   </div>
                 </motion.div>
               ))}
