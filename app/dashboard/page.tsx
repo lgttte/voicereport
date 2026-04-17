@@ -37,11 +37,11 @@ type ParsedReport = DBReport & { parsedData: ParsedData };
 // ─── Mock activity ────────────────────────────────────────────────────────────
 
 const MOCK_ACTIVITY = [
-  { id: 1, type: "report", label: "Jean a soumis un rapport",   sub: "Pasteur · 8 min",  dot: "bg-sky-400"     },
+  { id: 1, type: "report", label: "Jean a soumis un rapport",   sub: "Pasteur · 8 min",     dot: "bg-sky-400"     },
   { id: 2, type: "alert",  label: "Alerte critique détectée",   sub: "Chantier B · 22 min", dot: "bg-red-400 animate-pulse" },
-  { id: 3, type: "report", label: "Marc a soumis un rapport",   sub: "Lumière · 1h",     dot: "bg-emerald-400" },
-  { id: 4, type: "report", label: "Sophie — rapport soumis",    sub: "Rivière · 2h",     dot: "bg-violet-400"  },
-  { id: 5, type: "alert",  label: "Matériel manquant signalé",  sub: "Pasteur · 3h",     dot: "bg-amber-400"   },
+  { id: 3, type: "report", label: "Marc a soumis un rapport",   sub: "Lumière · 1h",        dot: "bg-emerald-400" },
+  { id: 4, type: "report", label: "Sophie — rapport soumis",    sub: "Rivière · 2h",        dot: "bg-violet-400"  },
+  { id: 5, type: "alert",  label: "Matériel manquant signalé",  sub: "Pasteur · 3h",        dot: "bg-amber-400"   },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -97,103 +97,121 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" ");
   return (
-    <svg width={W} height={H} className="opacity-50 shrink-0">
+    <svg width={W} height={H} className="opacity-60 shrink-0">
       <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// ─── Status Badge — style industriel, sans transparence ──────────────────────
 
 function StatusBadge({ status, score }: { status: string | null; score: number | null }) {
   const info = (() => {
     if (score !== null) {
-      if (score >= 9) return { label: "Excellent",   cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400" };
-      if (score >= 7) return { label: "Bon",         cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400" };
-      if (score >= 5) return { label: "Difficultés", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30",   dot: "bg-amber-400" };
-      if (score >= 3) return { label: "Difficile",   cls: "bg-red-500/15 text-red-300 border-red-500/30",         dot: "bg-red-400 animate-pulse" };
-      return           { label: "Critique",          cls: "bg-red-500/20 text-red-300 border-red-500/40",         dot: "bg-red-400 animate-pulse" };
+      if (score >= 9) return { label: "Excellent",   cls: "bg-emerald-900/60 text-emerald-300 border-emerald-700" };
+      if (score >= 7) return { label: "Bon",         cls: "bg-emerald-900/60 text-emerald-300 border-emerald-700" };
+      if (score >= 5) return { label: "Difficultés", cls: "bg-amber-900/60   text-amber-300   border-amber-700"   };
+      if (score >= 3) return { label: "Difficile",   cls: "bg-red-900/60     text-red-300     border-red-700"     };
+      return           { label: "Critique",          cls: "bg-red-900/80     text-red-200     border-red-600"     };
     }
-    if (status === "green")  return { label: "Validé",  cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400" };
-    if (status === "orange") return { label: "Attente", cls: "bg-amber-500/15 text-amber-300 border-amber-500/30",   dot: "bg-amber-400" };
-    if (status === "red")    return { label: "Urgent",  cls: "bg-red-500/15 text-red-300 border-red-500/30",         dot: "bg-red-400 animate-pulse" };
-    return                   { label: "—",            cls: "bg-slate-700/40 text-slate-400 border-slate-600/30",   dot: "bg-slate-500" };
+    if (status === "green")  return { label: "Validé",  cls: "bg-emerald-900/60 text-emerald-300 border-emerald-700" };
+    if (status === "orange") return { label: "Attente", cls: "bg-amber-900/60   text-amber-300   border-amber-700"   };
+    if (status === "red")    return { label: "Urgent",  cls: "bg-red-900/80     text-red-200     border-red-600"     };
+    return                   { label: "—",            cls: "bg-slate-800      text-slate-500   border-slate-700"   };
   })();
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${info.cls}`}>
-      <span className={`w-1 h-1 rounded-full shrink-0 ${info.dot}`} />
+    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${info.cls}`}>
       {info.label}
     </span>
   );
 }
 
-// ─── Report Drawer ────────────────────────────────────────────────────────────
+// ─── Report Drawer — style Tour de Contrôle ──────────────────────────────────
 
 function ReportDrawer({ report, onClose }: { report: ParsedReport; onClose: () => void }) {
   const sections = [
-    { key: "travaux_realises",     label: "Travaux réalisés",     icon: CheckCircle,   color: "text-emerald-400" },
-    { key: "problemes_rencontres", label: "Problèmes rencontrés", icon: AlertCircle,   color: "text-amber-400"   },
-    { key: "materiel_manquant",    label: "Matériel manquant",    icon: TriangleAlert, color: "text-red-400"     },
-    { key: "a_prevoir",            label: "À prévoir",             icon: ChevronRight,  color: "text-sky-400"     },
+    { key: "travaux_realises",     label: "Travaux réalisés",     icon: CheckCircle,   color: "text-emerald-400", border: "border-emerald-800", bg: "bg-emerald-950/40" },
+    { key: "problemes_rencontres", label: "Problèmes rencontrés", icon: AlertCircle,   color: "text-amber-400",   border: "border-amber-800",   bg: "bg-amber-950/40"   },
+    { key: "materiel_manquant",    label: "Matériel manquant",    icon: TriangleAlert, color: "text-red-400",     border: "border-red-800",     bg: "bg-red-950/40"     },
+    { key: "a_prevoir",            label: "À prévoir",             icon: ChevronRight,  color: "text-sky-400",     border: "border-sky-800",     bg: "bg-sky-950/40"     },
   ] as const;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-      style={{ backdropFilter: "blur(8px)", background: "rgba(0,0,0,0.7)" }}
+      style={{ background: "rgba(0,0,0,0.80)" }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl max-h-[88vh] overflow-hidden flex flex-col"
+        style={{ boxShadow: "0 30px 90px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* Drawer header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/8">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 bg-slate-950/60">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getAvatarColor(report.worker.name)} flex items-center justify-center text-white font-black text-xs shrink-0`}>
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getAvatarColor(report.worker.name)} flex items-center justify-center text-white font-black text-sm shrink-0`}>
               {getInitials(report.worker.name)}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white leading-tight">{report.chantier || "Sans chantier"}</h3>
-              <p className="text-xs text-slate-400">par {report.worker.name} · {formatDate(report.date)}</p>
+              <h3 className="text-base font-black text-white leading-tight">{report.chantier || "Sans chantier"}</h3>
+              <p className="text-xs text-slate-400">
+                <span className="font-semibold text-slate-300">{report.worker.name}</span>
+                <span className="mx-1.5 text-slate-600">·</span>
+                {formatDate(report.date)}
+              </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-all">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="overflow-y-auto p-5 space-y-3.5">
+        <div className="overflow-y-auto p-5 space-y-4">
+          {/* Status + score row */}
           <div className="flex items-center gap-3 flex-wrap">
             <StatusBadge status={report.status} score={report.score} />
             {report.score !== null && (
-              <span className="text-xs text-slate-400">
-                Note IA : <span className={`font-black text-base ${report.score >= 7 ? "text-emerald-400" : report.score >= 4 ? "text-amber-400" : "text-red-400"}`}>{report.score}</span>
-                <span className="text-slate-500">/10</span>
-              </span>
+              <div className="flex items-baseline gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Note IA</span>
+                <span className={`text-xl font-black ${report.score >= 7 ? "text-emerald-400" : report.score >= 4 ? "text-amber-400" : "text-red-400"}`}>
+                  {report.score}
+                </span>
+                <span className="text-slate-500 text-xs">/10</span>
+              </div>
             )}
           </div>
 
+          {/* Synthèse */}
           {report.parsedData.synthese && (
-            <div className="rounded-xl bg-white/5 border border-white/8 px-4 py-3">
-              <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-widest mb-1.5">Synthèse</p>
+            <div className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-4">
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Synthèse</p>
               <p className="text-sm text-slate-200 leading-relaxed">{report.parsedData.synthese}</p>
             </div>
           )}
 
-          {sections.map(({ key, label, icon: Icon, color }) => {
+          {/* Sections */}
+          {sections.map(({ key, label, icon: Icon, color, border, bg }) => {
             const items = (report.parsedData[key] ?? []) as string[];
             if (!items.length) return null;
             return (
-              <div key={key}>
-                <div className="flex items-center gap-1.5 mb-2">
+              <div key={key} className={`rounded-xl border ${border} ${bg} overflow-hidden`}>
+                <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${border}`}>
                   <Icon className={`w-3.5 h-3.5 ${color}`} />
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">{label}</p>
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${color}`}>{label}</p>
+                  <span className={`ml-auto text-xs font-black ${color}`}>{items.length}</span>
                 </div>
-                <ul className="space-y-1">
+                <ul>
                   {items.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs text-slate-300 rounded-lg bg-white/3 px-3 py-1.5">
-                      <span className={`${color} shrink-0 mt-0.5`}>•</span>
+                    <li
+                      key={i}
+                      className={`flex items-start gap-2.5 px-4 py-2.5 text-xs text-slate-300 ${i !== 0 ? `border-t ${border} border-opacity-40` : ""}`}
+                    >
+                      <span className={`${color} shrink-0 mt-0.5 font-bold`}>·</span>
                       {item}
                     </li>
                   ))}
@@ -222,10 +240,10 @@ export default function Dashboard() {
   const [refreshing,  setRefreshing]  = useState(false);
 
   // ── Filters
-  const [filterDate,    setFilterDate]    = useState<"all" | "today" | "week">("all");
+  const [filterDate,     setFilterDate]     = useState<"all" | "today" | "week">("all");
   const [filterChantier, setFilterChantier] = useState("all");
-  const [filterWorker,  setFilterWorker]  = useState("all");
-  const [filterStatus,  setFilterStatus]  = useState("all");
+  const [filterWorker,   setFilterWorker]   = useState("all");
+  const [filterStatus,   setFilterStatus]   = useState("all");
 
   const fetchReports = useCallback(async (cid: string, silent = false) => {
     if (!silent) setLoading(true);
@@ -302,42 +320,36 @@ export default function Dashboard() {
 
   const filtersActive = filterDate !== "all" || filterChantier !== "all" || filterWorker !== "all" || filterStatus !== "all";
 
+  const criticalReports = reports.filter(r => r.status === "red");
+
   return (
     <main className="min-h-screen bg-slate-950 text-white overflow-x-hidden">
 
-      {/* Ambient background */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-[200px] left-[10%] w-[550px] h-[550px] rounded-full bg-violet-600/6 blur-[140px]" />
-        <div className="absolute top-[30%] right-[-80px] w-[380px] h-[380px] rounded-full bg-sky-600/5 blur-[120px]" />
-        <div className="absolute bottom-0 left-[40%] w-[450px] h-[280px] rounded-full bg-indigo-600/4 blur-[120px]" />
-      </div>
-
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-3">
 
         {/* ═══════════════════════ HEADER ═══════════════════════ */}
-        <header className="flex items-center justify-between gap-3 mb-4 rounded-xl border border-white/8 bg-white/5 backdrop-blur-md px-4 py-2.5">
+        <header className="flex items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3"
+          style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}>
 
-          {/* Logo + brand */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center">
                 <Building2 className="w-4 h-4 text-white" />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-900" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[9px] font-bold text-violet-400 uppercase tracking-[0.18em] leading-none mb-0.5">Dashboard Admin</p>
-              <h1 className="text-sm font-black text-white leading-none truncate">{companyName || "Mon Entreprise"}</h1>
+            <div>
+              <p className="text-[9px] font-bold text-violet-400 uppercase tracking-widest leading-none mb-0.5">Dashboard Admin</p>
+              <h1 className="text-sm font-black text-white leading-none">{companyName || "Mon Entreprise"}</h1>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => companyId && fetchReports(companyId, true)}
               disabled={refreshing}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
               Actualiser
@@ -345,7 +357,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all"
+              className="flex items-center gap-1.5 border border-slate-700 bg-slate-800 hover:bg-red-950/60 hover:border-red-700 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-red-400 transition-colors"
             >
               <LogOut className="w-3 h-3" />
               Déconnexion
@@ -353,186 +365,209 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* ═══════════════════════ CRITICAL ALERTS BANNER ═══════════════════════ */}
+        {criticalAlerts > 0 && (
+          <div className="border border-red-700 bg-red-950/50 rounded-xl px-4 py-3.5">
+            <div className="flex items-center gap-2.5 mb-3">
+              <TriangleAlert className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-sm font-black text-red-300 uppercase tracking-wide">
+                {criticalAlerts} Alerte{criticalAlerts > 1 ? "s" : ""} critique{criticalAlerts > 1 ? "s" : ""} — Intervention requise
+              </span>
+              <span className="ml-auto w-2 h-2 rounded-full bg-red-400 animate-pulse shrink-0" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {criticalReports.map(r => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSelectedReport(r)}
+                  className="flex items-center gap-2 border border-red-700 bg-red-900/40 hover:bg-red-900/70 px-3 py-2 rounded-lg text-xs transition-colors"
+                >
+                  <span className="font-bold text-red-200">{r.chantier || "Sans chantier"}</span>
+                  <span className="text-red-700">·</span>
+                  <span className="text-red-400 font-medium">{r.worker.name}</span>
+                  <span className="text-red-700">·</span>
+                  <span className="text-red-500">{formatRelative(r.date)}</span>
+                  <Eye className="w-3 h-3 text-red-400 ml-0.5" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ═══════════════════════ KPI GRID ═══════════════════════ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
           {/* KPI 1 — Chantiers actifs */}
-          <div className="relative overflow-hidden rounded-xl border border-sky-500/15 bg-white/5 backdrop-blur-md px-3.5 py-3 hover:bg-white/8 transition-all group">
-            <div className="pointer-events-none absolute -top-5 -right-5 w-14 h-14 rounded-full bg-sky-500/15 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="w-6 h-6 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
-                <HardHat className="w-3 h-3 text-sky-400" />
+          <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-8 h-8 rounded-lg bg-sky-900/60 border border-sky-700 flex items-center justify-center">
+                <HardHat className="w-4 h-4 text-sky-400" />
               </div>
-              {/* Mini bar sparkline */}
               <div className="flex items-end gap-0.5 h-5">
                 {last7.map((v, i) => (
                   <div
                     key={i}
-                    className="w-1.5 rounded-t-[2px] bg-sky-500/40"
+                    className="w-1.5 rounded-t-sm bg-sky-600/60"
                     style={{ height: `${Math.max(3, (v / Math.max(...last7, 1)) * 20)}px` }}
                   />
                 ))}
               </div>
             </div>
-            <p className="text-2xl font-black text-white leading-none mb-0.5">{activeChantiers}</p>
-            <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Chantiers actifs</p>
-            <p className="text-[10px] text-slate-600 mt-0.5">{reports.length} rapport{reports.length !== 1 ? "s" : ""} au total</p>
+            <p className="text-3xl font-black text-white leading-none mb-1">{activeChantiers}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Chantiers actifs</p>
+            <p className="text-xs text-slate-600 mt-1">{reports.length} rapport{reports.length !== 1 ? "s" : ""} total</p>
           </div>
 
           {/* KPI 2 — Rapports aujourd'hui */}
-          <div className="relative overflow-hidden rounded-xl border border-violet-500/15 bg-white/5 backdrop-blur-md px-3.5 py-3 hover:bg-white/8 transition-all group">
-            <div className="pointer-events-none absolute -top-5 -right-5 w-14 h-14 rounded-full bg-violet-500/15 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />
-            <div className="flex items-center justify-between mb-2.5">
-              <div className="w-6 h-6 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                <FileText className="w-3 h-3 text-violet-400" />
+          <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-8 h-8 rounded-lg bg-violet-900/60 border border-violet-700 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-violet-400" />
               </div>
               <Sparkline data={last7} color="#a78bfa" />
             </div>
-            <p className="text-2xl font-black text-white leading-none mb-0.5">{reportsToday}</p>
-            <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Rapports aujourd&apos;hui</p>
-            <p className="text-[10px] text-slate-600 mt-0.5">{reportsToday === 0 ? "Aucun ce jour" : "Dernier < 1h"}</p>
+            <p className="text-3xl font-black text-white leading-none mb-1">{reportsToday}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rapports aujourd&apos;hui</p>
+            <p className="text-xs text-slate-600 mt-1">{reportsToday === 0 ? "Aucun ce jour" : "Dernier · < 1h"}</p>
           </div>
 
           {/* KPI 3 — Code chantier */}
           <button
             type="button"
             onClick={copyCode}
-            className="relative overflow-hidden rounded-xl bg-white/5 backdrop-blur-md px-3.5 py-3 hover:bg-white/8 transition-all group text-left border"
-            style={{ borderColor: codeCopied ? "rgba(52,211,153,0.35)" : "rgba(251,191,36,0.2)" }}
+            className="bg-slate-900 border rounded-xl px-4 py-4 text-left hover:bg-slate-800 transition-colors"
+            style={{ borderColor: codeCopied ? "rgb(21 128 61)" : "rgb(120 83 19 / 0.6)" }}
           >
-            <div className="pointer-events-none absolute -top-5 -right-5 w-14 h-14 rounded-full bg-amber-500/12 blur-xl opacity-60 group-hover:opacity-90 transition-opacity" />
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[9px] font-black text-amber-500/70 uppercase tracking-[0.2em]">Code chantier</p>
-              <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${codeCopied ? "bg-emerald-500/20" : "bg-amber-500/10 group-hover:bg-amber-500/20"}`}>
-                {codeCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-amber-400" />}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">Code chantier</p>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors ${codeCopied ? "bg-emerald-900/60 border-emerald-700" : "bg-amber-900/40 border-amber-700"}`}>
+                {codeCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-amber-400" />}
               </div>
             </div>
-            <p className="text-xl font-black tracking-[0.22em] text-amber-300 leading-none mb-1.5">{inviteCode || "——"}</p>
-            <p className="text-[10px] text-slate-600">{codeCopied ? "✓ Copié dans le presse-papier" : "Partager aux équipes terrain"}</p>
+            <p className="text-2xl font-black tracking-[0.22em] text-amber-300 leading-none mb-1">{inviteCode || "——"}</p>
+            <p className="text-xs text-slate-500">{codeCopied ? "✓ Copié dans le presse-papier" : "Cliquer pour copier"}</p>
           </button>
 
           {/* KPI 4 — Alertes critiques */}
-          <div className={`relative overflow-hidden rounded-xl border bg-white/5 backdrop-blur-md px-3.5 py-3 hover:bg-white/8 transition-all group ${criticalAlerts > 0 ? "border-red-500/25" : "border-white/8"}`}>
-            {criticalAlerts > 0 && (
-              <div className="pointer-events-none absolute -top-5 -right-5 w-14 h-14 rounded-full bg-red-500/20 blur-xl opacity-70 group-hover:opacity-90 transition-opacity" />
-            )}
-            <div className="flex items-center justify-between mb-2.5">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${criticalAlerts > 0 ? "bg-red-500/15 border border-red-500/25" : "bg-slate-700/30 border border-white/8"}`}>
-                <TriangleAlert className={`w-3 h-3 ${criticalAlerts > 0 ? "text-red-400" : "text-slate-500"}`} />
+          <div className={`bg-slate-900 rounded-xl px-4 py-4 border ${criticalAlerts > 0 ? "border-red-700" : "border-slate-800"}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${criticalAlerts > 0 ? "bg-red-900/60 border-red-700" : "bg-slate-800 border-slate-700"}`}>
+                <TriangleAlert className={`w-4 h-4 ${criticalAlerts > 0 ? "text-red-400" : "text-slate-500"}`} />
               </div>
               {criticalAlerts > 0 && (
-                <span className="flex items-center gap-1 text-[9px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">
-                  <span className="w-1 h-1 rounded-full bg-red-400 animate-pulse" />
-                  ACTIF
+                <span className="flex items-center gap-1.5 text-[9px] font-black text-red-300 bg-red-900/60 border border-red-700 px-2 py-1 rounded-md uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  Actif
                 </span>
               )}
             </div>
-            <p className={`text-2xl font-black leading-none mb-0.5 ${criticalAlerts > 0 ? "text-red-400" : "text-white"}`}>{criticalAlerts}</p>
-            <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Alertes critiques</p>
-            <p className="text-[10px] text-slate-600 mt-0.5">{criticalAlerts > 0 ? "Intervention requise" : "Aucune alerte active"}</p>
+            <p className={`text-3xl font-black leading-none mb-1 ${criticalAlerts > 0 ? "text-red-400" : "text-white"}`}>
+              {criticalAlerts}
+            </p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Alertes critiques</p>
+            <p className="text-xs text-slate-600 mt-1">{criticalAlerts > 0 ? "Intervention requise" : "Aucune alerte active"}</p>
           </div>
         </div>
 
         {/* ═══════════════════════ 2-COL LAYOUT ═══════════════════════ */}
         <div className="flex flex-col lg:flex-row gap-3">
 
-          {/* ──────── LEFT: Activity + Filters ──────── */}
-          <aside className="lg:w-[27%] shrink-0 flex flex-col gap-3">
+          {/* ──────── LEFT SIDEBAR ──────── */}
+          <aside className="lg:w-[260px] shrink-0 space-y-3">
 
-            {/* Live Feed */}
-            <div className="rounded-xl border border-white/8 bg-white/5 backdrop-blur-md overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/8">
+            {/* Activity Feed */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800">
                 <Activity className="w-3.5 h-3.5 text-violet-400" />
                 <h2 className="text-xs font-bold text-white">Activité récente</h2>
-                <span className="ml-auto flex items-center gap-1">
+                <span className="ml-auto flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] text-emerald-400 font-semibold">Live</span>
+                  <span className="text-[10px] text-emerald-400 font-bold">Live</span>
                 </span>
               </div>
 
-              {/* Feed items */}
-              <div className="px-2 py-1.5 space-y-px">
-                {reports.slice(0, 4).map((r) => (
+              <div>
+                {reports.slice(0, 5).map((r, idx) => (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => setSelectedReport(r)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/6 transition-all text-left group"
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-800 transition-colors ${idx !== 0 ? "border-t border-slate-800" : ""}`}
                   >
-                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      r.status === "red" ? "bg-red-400 animate-pulse"
+                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      r.status === "red"    ? "bg-red-400 animate-pulse"
                       : r.status === "orange" ? "bg-amber-400"
                       : "bg-emerald-400"
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white leading-tight truncate">
-                        <span className="font-semibold">{r.worker.name}</span>
-                        <span className="text-slate-500"> · {r.chantier || "Sans chantier"}</span>
-                      </p>
-                      <p className="text-[10px] text-slate-600 leading-tight">{formatRelative(r.date)}</p>
+                      <p className="text-xs font-semibold text-white leading-tight truncate">{r.worker.name}</p>
+                      <p className="text-[10px] text-slate-500 leading-tight truncate">{r.chantier || "Sans chantier"}</p>
                     </div>
-                    <ChevronRight className="w-3 h-3 text-slate-700 group-hover:text-slate-400 shrink-0 transition-colors" />
+                    <span className="text-[10px] text-slate-600 shrink-0">{formatRelative(r.date)}</span>
                   </button>
                 ))}
 
-                {reports.length < 4 && MOCK_ACTIVITY.slice(reports.length).map((a) => (
-                  <div key={a.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg opacity-35">
+                {reports.length < 5 && MOCK_ACTIVITY.slice(reports.length).map((a, idx) => (
+                  <div
+                    key={a.id}
+                    className={`flex items-center gap-3 px-4 py-2.5 opacity-25 ${(idx !== 0 || reports.length > 0) ? "border-t border-slate-800" : ""}`}
+                  >
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.dot}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-400 leading-tight truncate">{a.label}</p>
-                      <p className="text-[10px] text-slate-600 leading-tight">{a.sub}</p>
+                      <p className="text-xs text-slate-400 truncate">{a.label}</p>
+                      <p className="text-[10px] text-slate-600">{a.sub}</p>
                     </div>
                   </div>
                 ))}
 
                 {reports.length === 0 && (
-                  <p className="text-center text-[10px] text-slate-700 py-4">En attente d&apos;activité…</p>
+                  <p className="text-center text-[10px] text-slate-700 py-5">En attente d&apos;activité…</p>
                 )}
               </div>
 
-              {/* Mini stats */}
-              <div className="border-t border-white/8 px-3 py-2 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-white/4 border border-white/6 px-2.5 py-1.5 text-center">
-                  <p className="text-sm font-black text-white leading-none">{activeChantiers}</p>
-                  <p className="text-[9px] text-slate-600 uppercase tracking-wider mt-0.5">Chantiers</p>
+              <div className="border-t border-slate-800 bg-slate-950/40 px-4 py-3 grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-lg font-black text-white leading-none">{activeChantiers}</p>
+                  <p className="text-[9px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">Chantiers</p>
                 </div>
-                <div className="rounded-lg bg-white/4 border border-white/6 px-2.5 py-1.5 text-center">
-                  <p className="text-sm font-black text-white leading-none">{reports.filter(r => r.status === "green").length}</p>
-                  <p className="text-[9px] text-slate-600 uppercase tracking-wider mt-0.5">Validés</p>
+                <div>
+                  <p className="text-lg font-black text-emerald-400 leading-none">{reports.filter(r => r.status === "green").length}</p>
+                  <p className="text-[9px] font-bold text-slate-600 uppercase tracking-wider mt-0.5">Validés</p>
                 </div>
               </div>
             </div>
 
             {/* Filters */}
-            <div className="rounded-xl border border-white/8 bg-white/5 backdrop-blur-md overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-white/8">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
                 <h2 className="text-xs font-bold text-white">Filtres</h2>
                 {filtersActive && (
                   <button
                     type="button"
                     onClick={() => { setFilterDate("all"); setFilterChantier("all"); setFilterWorker("all"); setFilterStatus("all"); }}
-                    className="ml-auto text-[10px] text-slate-500 hover:text-violet-400 transition-colors"
+                    className="ml-auto text-[10px] font-bold text-slate-500 hover:text-violet-400 transition-colors"
                   >
                     Réinitialiser
                   </button>
                 )}
               </div>
 
-              <div className="p-3 space-y-2.5">
+              <div className="p-4 space-y-4">
                 {/* Période */}
                 <div>
-                  <label className="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Période</label>
-                  <div className="flex gap-1">
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Période</label>
+                  <div className="flex gap-1.5">
                     {(["all", "today", "week"] as const).map(v => (
                       <button
                         key={v}
                         type="button"
                         onClick={() => setFilterDate(v)}
-                        className={`flex-1 text-[10px] font-semibold py-1 rounded-md transition-all ${
+                        className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg border transition-colors ${
                           filterDate === v
-                            ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
-                            : "bg-white/4 text-slate-500 border border-white/8 hover:bg-white/8 hover:text-slate-300"
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700 hover:text-slate-300"
                         }`}
                       >
                         {v === "all" ? "Tout" : v === "today" ? "Auj." : "7j"}
@@ -543,11 +578,11 @@ export default function Dashboard() {
 
                 {/* Chantier */}
                 <div>
-                  <label className="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Chantier</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Chantier</label>
                   <select
                     value={filterChantier}
                     onChange={e => setFilterChantier(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-violet-500/40 transition-all appearance-none cursor-pointer"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition-colors cursor-pointer"
                   >
                     <option value="all" className="bg-slate-900">Tous les chantiers</option>
                     {chantierOptions.map(c => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
@@ -556,11 +591,11 @@ export default function Dashboard() {
 
                 {/* Ouvrier */}
                 <div>
-                  <label className="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ouvrier</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Ouvrier</label>
                   <select
                     value={filterWorker}
                     onChange={e => setFilterWorker(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-violet-500/40 transition-all appearance-none cursor-pointer"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-violet-500 transition-colors cursor-pointer"
                   >
                     <option value="all" className="bg-slate-900">Tous les ouvriers</option>
                     {workerOptions.map(w => <option key={w} value={w} className="bg-slate-900">{w}</option>)}
@@ -569,23 +604,23 @@ export default function Dashboard() {
 
                 {/* Statut */}
                 <div>
-                  <label className="block text-[9px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Statut</label>
+                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Statut</label>
                   <div className="flex gap-1">
                     {(["all", "green", "orange", "red"] as const).map(v => (
                       <button
                         key={v}
                         type="button"
                         onClick={() => setFilterStatus(v)}
-                        className={`flex-1 text-[9px] font-semibold py-1 rounded-md transition-all ${
+                        className={`flex-1 text-[9px] font-bold py-1.5 rounded-lg border transition-colors ${
                           filterStatus === v
-                            ? v === "all"    ? "bg-white/15 text-white border border-white/20"
-                              : v === "green"  ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                              : v === "orange" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                                               : "bg-red-500/20 text-red-300 border border-red-500/30"
-                            : "bg-white/4 text-slate-600 border border-white/8 hover:bg-white/8 hover:text-slate-400"
+                            ? v === "all"    ? "bg-slate-600 text-white border-slate-500"
+                              : v === "green"  ? "bg-emerald-700 text-white border-emerald-600"
+                              : v === "orange" ? "bg-amber-700 text-white border-amber-600"
+                                               : "bg-red-700 text-white border-red-600"
+                            : "bg-slate-800 text-slate-600 border-slate-700 hover:bg-slate-700 hover:text-slate-400"
                         }`}
                       >
-                        {v === "all" ? "Tous" : v === "green" ? "✓ OK" : v === "orange" ? "Att." : "Urg."}
+                        {v === "all" ? "Tous" : v === "green" ? "✓" : v === "orange" ? "~" : "!"}
                       </button>
                     ))}
                   </div>
@@ -596,88 +631,89 @@ export default function Dashboard() {
 
           {/* ──────── RIGHT: Reports table ──────── */}
           <section className="flex-1 min-w-0">
-            <div className="rounded-xl border border-white/8 bg-white/5 backdrop-blur-md overflow-hidden">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
 
               {/* Toolbar */}
-              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/8">
-                <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 bg-slate-950/40">
+                <div className="flex items-center gap-2">
                   <FileText className="w-3.5 h-3.5 text-sky-400" />
-                  <h2 className="text-xs font-bold text-white">Derniers rapports</h2>
-                  <span className="rounded-full bg-white/8 border border-white/10 px-1.5 py-0.5 text-[10px] font-bold text-slate-400">
+                  <h2 className="text-sm font-black text-white">Rapports</h2>
+                  <span className="bg-slate-800 border border-slate-700 rounded-md px-2 py-0.5 text-[10px] font-bold text-slate-400">
                     {filteredReports.length}
                   </span>
                 </div>
                 <div className="ml-auto relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Chantier, ouvrier…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-48 bg-white/6 border border-white/10 rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-sky-500/40 focus:bg-white/8 transition-all"
+                    className="w-52 bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-sky-600 transition-colors"
                   />
                 </div>
               </div>
 
               {/* Column headers */}
-              <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_52px_80px_80px] gap-3 px-4 py-1.5 border-b border-white/6 text-[9px] font-black text-slate-600 uppercase tracking-[0.12em]">
-                <span>Chantier</span>
-                <span>Ouvrier</span>
-                <span>Statut</span>
-                <span>Note</span>
-                <span>Date</span>
-                <span className="text-right">Actions</span>
+              <div className="hidden lg:grid grid-cols-[2fr_1.4fr_110px_52px_90px_120px] gap-3 px-4 py-2.5 border-b border-slate-800 bg-slate-950/60">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Chantier</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ouvrier</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Statut</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Note</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Date</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Actions</span>
               </div>
 
               {/* Rows */}
               {loading ? (
-                <div className="flex items-center justify-center py-14">
-                  <div className="w-7 h-7 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-7 h-7 rounded-full border-2 border-violet-600 border-t-transparent animate-spin" />
                 </div>
               ) : filteredReports.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                  <div className="w-11 h-11 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center mb-3">
+                <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-3">
                     <FileText className="w-5 h-5 text-slate-600" />
                   </div>
-                  <p className="text-sm text-slate-400 font-semibold mb-1">
+                  <p className="text-sm font-bold text-slate-300 mb-1.5">
                     {search || filtersActive ? "Aucun résultat" : "Aucun rapport"}
                   </p>
                   <p className="text-xs text-slate-600 max-w-xs">
                     {search
                       ? `Aucun rapport ne correspond à "${search}"`
-                      : filtersActive ? "Essayez de modifier les filtres."
-                      : <>Partagez le code <span className="font-black text-amber-400">{inviteCode}</span> à vos équipes.</>
+                      : filtersActive
+                        ? "Modifiez les filtres pour voir d'autres données."
+                        : <>Partagez le code <span className="font-black text-amber-400">{inviteCode}</span> à vos équipes.</>
                     }
                   </p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/4">
-                  {filteredReports.map((r) => (
+                <div>
+                  {filteredReports.map((r, idx) => (
                     <div
                       key={r.id}
-                      className="group grid grid-cols-1 lg:grid-cols-[2fr_1.2fr_1fr_52px_80px_80px] gap-2 lg:gap-3 px-4 py-2.5 hover:bg-white/5 transition-all cursor-pointer"
+                      className={`group grid grid-cols-1 lg:grid-cols-[2fr_1.4fr_110px_52px_90px_120px] gap-2 lg:gap-3 px-4 py-3 hover:bg-slate-800/70 transition-colors cursor-pointer ${idx !== 0 ? "border-t border-slate-800" : ""}`}
                       onClick={() => setSelectedReport(r)}
                     >
                       {/* Chantier */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${
-                          r.status === "green"  ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.6)]"
-                          : r.status === "orange" ? "bg-amber-400 shadow-[0_0_4px_rgba(251,191,36,0.5)]"
-                          : r.status === "red"    ? "bg-red-400 shadow-[0_0_4px_rgba(248,113,113,0.7)] animate-pulse"
+                          r.status === "green"  ? "bg-emerald-400"
+                          : r.status === "orange" ? "bg-amber-400"
+                          : r.status === "red"    ? "bg-red-400 animate-pulse"
                           : "bg-slate-600"
                         }`} />
                         <div>
-                          <p className="font-bold text-white text-xs leading-tight">{r.chantier || "Sans chantier"}</p>
+                          <p className="text-sm font-bold text-white leading-tight">{r.chantier || "Sans chantier"}</p>
                           <p className="text-[10px] text-slate-500 lg:hidden">{r.worker.name} · {formatRelative(r.date)}</p>
                         </div>
                       </div>
 
                       {/* Worker */}
-                      <div className="hidden lg:flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${getAvatarColor(r.worker.name)} flex items-center justify-center text-white text-[9px] font-black shrink-0`}>
+                      <div className="hidden lg:flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getAvatarColor(r.worker.name)} flex items-center justify-center text-white text-[9px] font-black shrink-0`}>
                           {getInitials(r.worker.name)}
                         </div>
-                        <span className="text-xs text-slate-300 font-medium truncate">{r.worker.name}</span>
+                        <span className="text-sm font-semibold text-slate-200 truncate">{r.worker.name}</span>
                       </div>
 
                       {/* Status */}
@@ -701,32 +737,27 @@ export default function Dashboard() {
 
                       {/* Date */}
                       <div className="hidden lg:flex items-center">
-                        <span className="text-[10px] text-slate-500">{formatRelative(r.date)}</span>
+                        <span className="text-xs font-medium text-slate-400">{formatRelative(r.date)}</span>
                       </div>
 
-                      {/* Actions */}
-                      <div className="hidden lg:flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
+                      {/* Actions — boutons "Money" avec bordures */}
+                      <div className="hidden lg:flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                         <button
                           type="button"
                           title="Voir le détail"
                           onClick={() => setSelectedReport(r)}
-                          className="w-6 h-6 rounded-md hover:bg-white/10 flex items-center justify-center text-slate-600 hover:text-sky-400 transition-all"
+                          className="flex items-center gap-1 border border-slate-700 bg-slate-800 hover:bg-sky-950/60 hover:border-sky-700 hover:text-sky-300 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 transition-colors"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-3 h-3" />
+                          Voir
                         </button>
                         <button
                           type="button"
-                          title="Télécharger"
-                          className="w-6 h-6 rounded-md hover:bg-white/10 flex items-center justify-center text-slate-600 hover:text-violet-400 transition-all"
+                          title="Télécharger PDF"
+                          className="flex items-center gap-1 border border-slate-700 bg-slate-800 hover:bg-violet-950/60 hover:border-violet-700 hover:text-violet-300 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-slate-400 transition-colors"
                         >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          title="Partager"
-                          className="w-6 h-6 rounded-md hover:bg-white/10 flex items-center justify-center text-slate-600 hover:text-emerald-400 transition-all"
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
+                          <Download className="w-3 h-3" />
+                          PDF
                         </button>
                       </div>
                     </div>
