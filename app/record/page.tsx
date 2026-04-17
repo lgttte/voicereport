@@ -1120,28 +1120,27 @@ export default function RecordPage() {
 
     // ── Idle screen (default) ──
     const GUIDE_ITEMS = [
-      { icon: MapPin,        color: "text-sky-400",     bg: "bg-sky-500/10 border-sky-500/20",       glow: "group-hover:border-sky-500/45",     label: "Lieu du chantier",     hint: "Nommez le chantier ou la ville" },
-      { icon: Wrench,        color: "text-violet-400",  bg: "bg-violet-500/10 border-violet-500/20", glow: "group-hover:border-violet-500/45",   label: "Travaux réalisés",      hint: "Décrivez les tâches effectuées" },
-      { icon: TriangleAlert, color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",   glow: "group-hover:border-amber-500/45",    label: "Problèmes rencontrés", hint: "Retards, pannes, incidents" },
-      { icon: Package,       color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20",glow: "group-hover:border-emerald-500/45", label: "Matériel manquant",     hint: "Ce qui manque pour avancer" },
+      { icon: MapPin,        color: "text-sky-400",     iconBg: "bg-slate-950 border-sky-500/50",     label: "Lieu du chantier",     hint: "Nommez le chantier ou la ville" },
+      { icon: Wrench,        color: "text-violet-400",  iconBg: "bg-slate-950 border-violet-500/50",  label: "Travaux réalisés",      hint: "Décrivez les tâches effectuées" },
+      { icon: TriangleAlert, color: "text-amber-400",   iconBg: "bg-slate-950 border-amber-500/50",   label: "Problèmes rencontrés",  hint: "Retards, pannes, incidents" },
+      { icon: Package,       color: "text-emerald-400", iconBg: "bg-slate-950 border-emerald-500/50", label: "Matériel manquant",     hint: "Ce qui manque pour avancer" },
     ] as const;
 
     return (
-      <main className="relative bg-slate-950 overflow-hidden" style={{ height: "100dvh" }}>
-        {/* Ambient */}
+      <main
+        className="relative bg-slate-950 min-h-screen"
+        style={{ paddingBottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}
+      >
+        {/* Ambient — très subtil, pas de glassmorphism */}
         <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-sky-600/10 blur-[140px]" />
-          <div className="absolute top-[20%] right-[-80px] w-[350px] h-[350px] rounded-full bg-violet-600/8 blur-[100px]" />
-          <div className="absolute bottom-0 left-[20%] w-[400px] h-[300px] rounded-full bg-indigo-600/6 blur-[100px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_55%_at_50%_-5%,rgba(30,58,138,0.20),transparent)]" />
         </div>
 
-        {/* Full-height column: header → mic (flex-1 centered) → cards pinned to bottom */}
-        {/* paddingBottom = hauteur nav (~72px) + safe-area iOS (~34px sur iPhone) */}
-        <div className="relative z-10 flex flex-col h-full w-full max-w-lg mx-auto px-4" style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="relative z-10 flex flex-col w-full max-w-lg mx-auto px-5">
 
-          {/* Header */}
+          {/* ── Header ── */}
           <motion.div
-            className="text-center pt-8 pb-4 w-full shrink-0"
+            className="text-center pt-10 pb-6 shrink-0"
             initial={{ opacity: 0, y: -14 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } }}
           >
@@ -1153,99 +1152,139 @@ export default function RecordPage() {
             <h1 className="text-3xl font-black text-white tracking-tight">Nouveau rapport</h1>
           </motion.div>
 
-          {/* Mic button — centré dans l'espace disponible, stable sur tous formats d'écran */}
+          {/* ── Bouton micro — massif, tactile, "interphone" ── */}
           <motion.div
-            className="flex-1 flex flex-col items-center justify-center gap-8 min-h-0"
+            className="flex flex-col items-center"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE, delay: 0.1 } }}
           >
-            {/* Bouton mic 148px — assez grand pour être l'élément central sans déborder */}
-            <div className="relative flex items-center justify-center shrink-0">
-              <div className="absolute w-60 h-60 rounded-full border border-white/5" />
-              <div className="absolute w-48 h-48 rounded-full border border-white/8" />
+            <div className="relative flex items-center justify-center py-4">
+              {/* Anneaux décoratifs solides — look "tour de contrôle" */}
+              <div className="absolute w-64 h-64 rounded-full border border-slate-800" />
+              <div className="absolute w-52 h-52 rounded-full border border-slate-700/70" />
+
               <motion.button
                 type="button"
                 onClick={handleButtonClick}
-                whileHover={{ scale: 1.06 }}
+                whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.94 }}
                 aria-label="Démarrer l'enregistrement"
                 className="relative rounded-full flex items-center justify-center"
                 style={{
-                  width: 148, height: 148,
-                  background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)",
-                  boxShadow: "0 0 50px rgba(99,102,241,0.40), 0 0 100px rgba(37,99,235,0.12), 0 16px 36px rgba(0,0,0,0.5)",
+                  width: 164,
+                  height: 164,
+                  background: "linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 55%, #2563eb 100%)",
+                  boxShadow:
+                    "0 0 0 4px rgba(37,99,235,0.18), 0 0 55px rgba(37,99,235,0.32), inset 0 1px 0 rgba(255,255,255,0.14), 0 22px 50px rgba(0,0,0,0.65)",
                 }}
               >
-                <Mic className="w-16 h-16 text-white" />
+                {/* Bord biseauté intérieur — effet bouton physique */}
+                <div className="absolute inset-[14px] rounded-full border border-white/10 pointer-events-none" />
+                <Mic className="w-16 h-16 text-white relative z-10" />
               </motion.button>
             </div>
 
-            {/* Boîte d'instruction — largeur fixe pour éviter les layout shifts au changement de phrase */}
-            <div className="flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.04] backdrop-blur-md px-4 py-2.5 w-72">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={encourageIdx}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-sm text-slate-300 font-medium"
-                >
-                  {ENCOURAGEMENT_PHRASES[encourageIdx]}
-                </motion.span>
-              </AnimatePresence>
+            {/* ── Panneau de statut — bloc physique, mt-10 obligatoire ── */}
+            <div className="mt-10 w-full">
+              <div
+                className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3.5"
+                style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)" }}
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"
+                  style={{ boxShadow: "0 0 8px rgba(52,211,153,0.75)" }}
+                />
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={encourageIdx}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-slate-100"
+                  >
+                    {ENCOURAGEMENT_PHRASES[encourageIdx]}
+                  </motion.span>
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
 
-          {/* Guide cards — épinglées en bas, grille aérée */}
+          {/* ── Grille des 4 cartes ── */}
           <motion.div
-            className="w-full shrink-0 pb-3"
+            className="w-full mt-8"
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
           >
             {offlineQueue.length > 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-2 w-full flex items-center gap-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-4 w-full flex items-center gap-2.5 rounded-xl border border-amber-600/50 bg-amber-950/40 px-4 py-3"
+                style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.45)" }}
+              >
                 <WifiOff className="h-4 w-4 text-amber-400 shrink-0" />
-                <p className="text-xs text-amber-300 flex-1">{offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi</p>
+                <p className="text-xs text-amber-200 flex-1 font-semibold">
+                  {offlineQueue.length} rapport{offlineQueue.length > 1 ? "s" : ""} en attente d&apos;envoi
+                </p>
                 {typeof navigator !== "undefined" && navigator.onLine && (
-                  <button type="button" onClick={() => window.dispatchEvent(new Event("online"))} className="text-[10px] text-amber-400 font-semibold hover:text-amber-300">Réessayer</button>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event("online"))}
+                    className="text-[10px] text-amber-400 font-bold hover:text-amber-200"
+                  >
+                    Réessayer
+                  </button>
                 )}
               </motion.div>
             )}
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-3 text-center">Vous pouvez mentionner</p>
-            <div className="grid grid-cols-2 gap-5">
-              {GUIDE_ITEMS.map(({ icon: Icon, color, bg, glow, label, hint }) => (
+
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 text-center">
+              Vous pouvez mentionner
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              {GUIDE_ITEMS.map(({ icon: Icon, color, iconBg, label, hint }) => (
                 <motion.div
                   key={label}
                   variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
-                  whileHover={{ y: -2, transition: { duration: 0.15 } }}
-                  className={`group flex items-center gap-3 p-4 rounded-xl border bg-white/[0.03] backdrop-blur-sm border-white/8 ${glow} transition-colors duration-200`}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-slate-700 bg-slate-900"
+                  style={{ boxShadow: "0 4px 18px rgba(0,0,0,0.50), inset 0 1px 0 rgba(255,255,255,0.03)" }}
                 >
-                  <div className={`w-10 h-10 rounded-lg border ${bg} flex items-center justify-center shrink-0`}>
-                    <Icon className={`w-4.5 h-4.5 ${color}`} style={{ width: 18, height: 18 }} />
+                  <div className={`w-10 h-10 rounded-lg border ${iconBg} flex items-center justify-center shrink-0`}>
+                    <Icon className={`w-5 h-5 ${color}`} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white leading-tight">{label}</p>
-                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">{hint}</p>
+                    <p className="text-sm font-semibold text-white leading-tight">{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-snug">{hint}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
           </motion.div>
+
         </div>
 
-        {/* Bottom nav — z-50 + safe-area-inset-bottom pour iOS */}
-        <div className="fixed bottom-0 inset-x-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* ── Bottom nav — fond solide, bordure franche ── */}
+        <div
+          className="fixed bottom-0 inset-x-0 z-50"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        >
           <div className="mx-auto max-w-lg px-4">
-            <div className="rounded-t-2xl border border-white/8 bg-slate-950/90 backdrop-blur-xl px-2 py-3">
+            <div
+              className="rounded-t-2xl border border-slate-800 bg-slate-950 px-2 py-3"
+              style={{ boxShadow: "0 -4px 24px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)" }}
+            >
               <div className="flex items-center justify-around">
                 <button type="button" onClick={() => setStage("dashboard")} className="relative flex flex-col items-center gap-1 px-4 py-1 group">
                   <div className="relative">
                     <LayoutDashboard className="w-5 h-5 text-slate-400 group-hover:text-sky-400 transition-colors" />
                     {savedReports.length > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-black text-slate-950 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #fbbf24, #f59e0b)", boxShadow: "0 0 8px rgba(251,191,36,0.6)" }}>
+                      <span
+                        className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-black text-slate-950 flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg, #fbbf24, #f59e0b)", boxShadow: "0 0 8px rgba(251,191,36,0.6)" }}
+                      >
                         {savedReports.length > 9 ? "9+" : savedReports.length}
                       </span>
                     )}
@@ -1253,7 +1292,7 @@ export default function RecordPage() {
                   <span className="text-[10px] text-slate-500 group-hover:text-slate-300 transition-colors">Rapports</span>
                 </button>
                 <div className="flex flex-col items-center gap-1 px-4 py-1">
-                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-500/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-blue-900/60 border border-blue-600/50 flex items-center justify-center">
                     <Mic className="w-4 h-4 text-sky-400" />
                   </div>
                   <span className="text-[10px] font-bold text-sky-400">Enregistrer</span>
